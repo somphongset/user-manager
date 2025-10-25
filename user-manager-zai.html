@@ -454,52 +454,36 @@
             showLoginView();
         }
 
-        // --- Dynamic Script Loading with Multiple CDN Fallbacks ---
-        // This function will try to load the Supabase library from multiple sources.
+        // --- Dynamic Script Loading (Final Simplified Version) ---
+        // This function will load the Supabase library using the most standard method.
         function loadSupabaseAndStartApp() {
-            const cdnUrls = [
-                'https://cdnjs.cloudflare.com/ajax/libs/supabase-js/2.39.3/supabase.min.js',
-                'https://unpkg.com/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js',
-                'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js'
-            ];
-            let currentCdnIndex = 0;
+            const script = document.createElement('script');
+            // Use the most standard and reliable URL for Supabase JS
+            script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+            script.onload = () => {
+                console.log('Supabase script loaded. Waiting for createClient to be available...');
+                let checkCount = 0;
+                const maxChecks = 100; // 100 * 50ms = 5 seconds
 
-            function tryLoadScript() {
-                if (currentCdnIndex >= cdnUrls.length) {
-                    // All CDNs failed
-                    document.getElementById('debugPane').innerHTML = 'FATAL ERROR: Failed to load the Supabase library from all available CDNs. Please check your internet connection, firewall, or antivirus software. Your local server might also be blocking external requests.';
-                    console.error('All CDN loading attempts failed.');
-                    return;
-                }
-
-                const script = document.createElement('script');
-                script.src = cdnUrls[currentCdnIndex];
-                script.onload = () => {
-                    console.log(`Supabase script loaded from ${cdnUrls[currentCdnIndex]}. Waiting for createClient...`);
-                    let checkCount = 0;
-                    const maxChecks = 100; // 100 * 50ms = 5 seconds
-                    const checkInterval = setInterval(() => {
-                        checkCount++;
-                        if (typeof window.createClient !== 'undefined') {
-                            clearInterval(checkInterval);
-                            console.log('createClient is now available. Starting app.');
-                            startApp();
-                        } else if (checkCount > maxChecks) {
-                            clearInterval(checkInterval);
-                            console.error('Timed out waiting for Supabase library to become available.');
-                            document.getElementById('debugPane').innerHTML = 'FATAL ERROR: Timed out waiting for the Supabase library. This is likely caused by your local server (XAMPP) or a browser extension blocking the script from running after it has been downloaded.';
-                        }
-                    }, 50); // Check every 50ms
-                };
-                script.onerror = (e) => {
-                    console.error(`Failed to load Supabase library from ${cdnUrls[currentCdnIndex]}.`, e);
-                    currentCdnIndex++; // Move to the next CDN
-                    tryLoadScript(); // Try the next one
-                };
-                document.head.appendChild(script);
-            }
-
-            tryLoadScript();
+                const checkInterval = setInterval(() => {
+                    checkCount++;
+                    // Use window.createClient to be explicit
+                    if (typeof window.createClient !== 'undefined') {
+                        clearInterval(checkInterval);
+                        console.log('createClient is now available. Starting app.');
+                        startApp();
+                    } else if (checkCount > maxChecks) {
+                        clearInterval(checkInterval);
+                        console.error('Timed out waiting for Supabase library to become available.');
+                        document.getElementById('debugPane').innerHTML = 'FATAL ERROR: Timed out waiting for the Supabase library. This is an unusual issue. Please try refreshing the page.';
+                    }
+                }, 50); // Check every 50ms
+            };
+            script.onerror = (e) => {
+                console.error('Failed to load Supabase library from jsdelivr.', e);
+                document.getElementById('debugPane').innerHTML = 'FATAL ERROR: Could not download the Supabase library from the CDN. Please check your internet connection.';
+            };
+            document.head.appendChild(script);
         }
 
         // Start the loading process when the page is ready.
