@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POS System Test - Manager & Staff Mode</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .mode-toggle {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .mode-toggle h2 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .mode-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .mode-btn {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .mode-btn.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .mode-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .screen {
+            display: none;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .screen.active {
+            display: block;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #38a169;
+        }
+        
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #e53e3e;
+        }
+        
+        .btn-secondary {
+            background: #718096;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #4a5568;
+        }
+        
+        .status-card {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .status-card h3 {
+            margin-bottom: 10px;
+            color: #2d3748;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .status-open {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        
+        .status-closed {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+        
+        .staff-list {
+            margin-top: 30px;
+        }
+        
+        .staff-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: #f7fafc;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        
+        .staff-info {
+            flex: 1;
+        }
+        
+        .staff-name {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 4px;
+        }
+        
+        .staff-status {
+            font-size: 14px;
+            color: #718096;
+        }
+        
+        .staff-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .error {
+            background: #fff5f5;
+            color: #c53030;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #fc8181;
+        }
+        
+        .success {
+            background: #f0fff4;
+            color: #22543d;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #68d391;
+        }
+        
+        .info {
+            background: #ebf8ff;
+            color: #2c5282;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #4299e1;
+        }
+        
+        .waiting-screen {
+            text-align: center;
+            padding: 40px 0;
+        }
+        
+        .waiting-screen h2 {
+            color: #e53e3e;
+            margin-bottom: 15px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .logout-btn {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Mode Toggle -->
+        <div class="mode-toggle">
+            <h2>🧪 เลือกโหมดทดสอบ</h2>
+            <div class="mode-buttons">
+                <button class="mode-btn active" onclick="switchMode('manager')">
+                    👔 Manager Mode
+                </button>
+                <button class="mode-btn" onclick="switchMode('staff')">
+                    👨‍💼 Staff Mode
+                </button>
+            </div>
+        </div>
+
+        <!-- Manager Login Screen -->
+        <div id="manager-login" class="screen active">
+            <h1>👔 Manager Login</h1>
+            <div id="manager-login-error"></div>
+            <form onsubmit="managerLogin(event)">
+                <div class="form-group">
+                    <label>อีเมล</label>
+                    <input type="email" id="manager-email" placeholder="manager@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label>รหัสผ่าน</label>
+                    <input type="password" id="manager-password" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="btn btn-primary">เข้าสู่ระบบ</button>
+            </form>
+        </div>
+
+        <!-- Manager Dashboard -->
+        <div id="manager-dashboard" class="screen">
+            <h1>👔 Manager Dashboard</h1>
+            <div id="manager-message"></div>
+            
+            <div class="status-card">
+                <h3>สถานะร้าน</h3>
+                <div id="manager-store-status"></div>
+            </div>
+            
+            <button id="toggle-store-btn" class="btn" onclick="toggleStore()">
+                กำลังโหลด...
+            </button>
+            
+            <div class="staff-list">
+                <h3>จัดการพนักงาน</h3>
+                <div id="staff-list-container"></div>
+            </div>
+            
+            <button class="btn btn-secondary logout-btn" onclick="logout()">ออกจากระบบ</button>
+        </div>
+
+        <!-- Staff Waiting Screen -->
+        <div id="staff-waiting" class="screen">
+            <div class="waiting-screen">
+                <h2>🔒 ร้านยังไม่เปิด</h2>
+                <p>กรุณารอให้ผู้จัดการเปิดร้านก่อน</p>
+                <div class="spinner"></div>
+                <p style="color: #718096; margin-top: 10px;">กำลังตรวจสอบสถานะ...</p>
+            </div>
+        </div>
+
+        <!-- Staff Login Screen -->
+        <div id="staff-login" class="screen">
+            <h1>👨‍💼 Staff Login</h1>
+            <div id="staff-login-error"></div>
+            <form onsubmit="staffLogin(event)">
+                <div class="form-group">
+                    <label>เลือกชื่อพนักงาน</label>
+                    <select id="staff-select" required>
+                        <option value="">-- เลือกชื่อ --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>รหัส PIN (6 หลัก)</label>
+                    <input type="password" id="staff-pin" placeholder="••••••" maxlength="6" pattern="\d{6}" required>
+                </div>
+                <button type="submit" class="btn btn-primary">เข้าสู่ระบบ</button>
+            </form>
+        </div>
+
+        <!-- Staff POS Screen -->
+        <div id="staff-pos" class="screen">
+            <h1>👨‍💼 POS System</h1>
+            <div id="staff-message"></div>
+            
+            <div class="status-card">
+                <h3>สถานะร้าน</h3>
+                <div id="staff-store-status"></div>
+            </div>
+            
+            <div class="info">
+                <strong>ผู้ใช้งาน:</strong> <span id="current-staff-name"></span>
+            </div>
+            
+            <button class="btn btn-danger" onclick="closeStore()">
+                🔒 ปิดร้าน
+            </button>
+            
+            <button class="btn btn-secondary logout-btn" onclick="logout()">ออกจากระบบ</button>
+        </div>
+    </div>
+
+    <script>
+        // ==================== Configuration ====================
+        const SUPABASE_URL = 'https://qtzvwwfczruwjzpwtgor.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0enZ3d2ZjenJ1d2p6cHd0Z29yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTE1NjAsImV4cCI6MjA3NzA2NzU2MH0.oxHzSpmd3wgffCI-xN_1xkArliG6OQePsXwbDCDYrKk'; // ⚠️ ต้องใส่ anon key ของคุณ
+        const EDGE_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/login-with-pin`;
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let currentMode = 'manager';
+        let storeStatusSubscription = null;
+        let currentUser = null;
+        
+        // ==================== Mode Switching ====================
+        function switchMode(mode) {
+            console.log(`🔄 Switching to ${mode} mode`);
+            currentMode = mode;
+            
+            // Update mode buttons
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Hide all screens
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            
+            // Logout current user
+            logout();
+            
+            // Show appropriate screen
+            if (mode === 'manager') {
+                document.getElementById('manager-login').classList.add('active');
+            } else {
+                checkStoreStatusForStaff();
+            }
+        }
+        
+        // ==================== Manager Functions ====================
+        async function managerLogin(event) {
+            event.preventDefault();
+            console.log('🔐 Manager login attempt');
+            
+            const email = document.getElementById('manager-email').value;
+            const password = document.getElementById('manager-password').value;
+            
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email: email,
+                password: password
+            });
+            
+            if (error) {
+                console.error('❌ Manager login error:', error);
+                showError('manager-login-error', error.message);
+                return;
+            }
+            
+            console.log('✅ Manager login success:', data);
+            
+            // Check if user is manager
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('role, full_name, status')
+                .eq('id', data.user.id)
+                .single();
+            
+            if (!profile || profile.role !== 'manager') {
+                console.error('❌ Not a manager');
+                showError('manager-login-error', 'คุณไม่ใช่ผู้จัดการ');
+                await supabase.auth.signOut();
+                return;
+            }
+            
+            if (profile.status !== 'active') {
+                console.error('❌ Manager is banned');
+                showError('manager-login-error', 'บัญชีของคุณถูกระงับ');
+                await supabase.auth.signOut();
+                return;
+            }
+            
+            currentUser = { ...data.user, profile };
+            showManagerDashboard();
+        }
+        
+        async function showManagerDashboard() {
+            console.log('📊 Showing manager dashboard');
+            document.getElementById('manager-login').classList.remove('active');
+            document.getElementById('manager-dashboard').classList.add('active');
+            
+            await updateStoreStatus();
+            await loadStaffList();
+            subscribeToStoreStatus();
+        }
+        
+        async function updateStoreStatus() {
+            const { data, error } = await supabase
+                .from('store_status')
+                .select('is_open')
+                .eq('id', 1)
+                .single();
+            
+            if (error) {
+                console.error('❌ Error loading store status:', error);
+                return;
+            }
+            
+            console.log('📍 Store status:', data.is_open ? 'OPEN' : 'CLOSED');
+            
+            const statusHTML = `<span class="status-badge ${data.is_open ? 'status-open' : 'status-closed'}">
+                ${data.is_open ? '✅ เปิดอยู่' : '🔒 ปิดอยู่'}
+            </span>`;
+            
+            document.getElementById('manager-store-status').innerHTML = statusHTML;
+            if (document.getElementById('staff-store-status')) {
+                document.getElementById('staff-store-status').innerHTML = statusHTML;
+            }
+            
+            // Update toggle button
+            const toggleBtn = document.getElementById('toggle-store-btn');
+            if (toggleBtn) {
+                if (data.is_open) {
+                    toggleBtn.textContent = '🔒 ปิดร้าน';
+                    toggleBtn.className = 'btn btn-danger';
+                } else {
+                    toggleBtn.textContent = '✅ เปิดร้าน';
+                    toggleBtn.className = 'btn btn-success';
+                }
+            }
+            
+            return data.is_open;
+        }
+        
+        async function toggleStore() {
+            console.log('🔄 Toggling store status');
+            
+            const { data: currentStatus } = await supabase
+                .from('store_status')
+                .select('is_open')
+                .eq('id', 1)
+                .single();
+            
+            const newStatus = !currentStatus.is_open;
+            console.log(`📍 Changing store status to: ${newStatus ? 'OPEN' : 'CLOSED'}`);
+            
+            const { error } = await supabase
+                .from('store_status')
+                .update({ is_open: newStatus })
+                .eq('id', 1);
+            
+            if (error) {
+                console.error('❌ Error toggling store:', error);
+                showError('manager-message', error.message);
+                return;
+            }
+            
+            console.log('✅ Store status changed successfully');
+            showSuccess('manager-message', `ร้าน${newStatus ? 'เปิด' : 'ปิด'}แล้ว`);
+            await updateStoreStatus();
+        }
+        
+        async function loadStaffList() {
+            console.log('👥 Loading staff list');
+            
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('id, full_name, status')
+                .eq('role', 'staff')
+                .order('full_name');
+            
+            if (error) {
+                console.error('❌ Error loading staff:', error);
+                return;
+            }
+            
+            console.log('✅ Staff loaded:', data);
+            
+            const container = document.getElementById('staff-list-container');
+            container.innerHTML = data.map(staff => `
+                <div class="staff-item">
+                    <div class="staff-info">
+                        <div class="staff-name">${staff.full_name}</div>
+                        <div class="staff-status">
+                            สถานะ: <strong>${staff.status === 'active' ? '✅ ใช้งานได้' : '🚫 ระงับ'}</strong>
+                        </div>
+                    </div>
+                    <div class="staff-actions">
+                        ${staff.status === 'active' 
+                            ? `<button class="btn-small btn-danger" onclick="banStaff('${staff.id}', '${staff.full_name}')">🚫 ระงับ</button>`
+                            : `<button class="btn-small btn-success" onclick="activateStaff('${staff.id}', '${staff.full_name}')">✅ เปิดใช้</button>`
+                        }
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        async function banStaff(staffId, staffName) {
+            console.log(`🚫 Banning staff: ${staffName}`);
+            
+            const { error } = await supabase
+                .from('profiles')
+                .update({ status: 'banned' })
+                .eq('id', staffId);
+            
+            if (error) {
+                console.error('❌ Error banning staff:', error);
+                showError('manager-message', error.message);
+                return;
+            }
+            
+            console.log('✅ Staff banned successfully');
+            showSuccess('manager-message', `ระงับพนักงาน ${staffName} แล้ว`);
+            await loadStaffList();
+        }
+        
+        async function activateStaff(staffId, staffName) {
+            console.log(`✅ Activating staff: ${staffName}`);
+            
+            const { error } = await supabase
+                .from('profiles')
+                .update({ status: 'active' })
+                .eq('id', staffId);
+            
+            if (error) {
+                console.error('❌ Error activating staff:', error);
+                showError('manager-message', error.message);
+                return;
+            }
+            
+            console.log('✅ Staff activated successfully');
+            showSuccess('manager-message', `เปิดใช้พนักงาน ${staffName} แล้ว`);
+            await loadStaffList();
+        }
+        
+        // ==================== Staff Functions ====================
+        async function checkStoreStatusForStaff() {
+            console.log('🔍 Checking store status for staff');
+            
+            const { data, error } = await supabase
+                .from('store_status')
+                .select('is_open')
+                .eq('id', 1)
+                .single();
+            
+            if (error) {
+                console.error('❌ Error checking store status:', error);
+                setTimeout(checkStoreStatusForStaff, 5000);
+                return;
+            }
+            
+            if (data.is_open) {
+                console.log('✅ Store is open, showing login');
+                document.getElementById('staff-waiting').classList.remove('active');
+                document.getElementById('staff-login').classList.add('active');
+                await loadStaffOptions();
+            } else {
+                console.log('🔒 Store is closed, showing waiting screen');
+                document.getElementById('staff-login').classList.remove('active');
+                document.getElementById('staff-waiting').classList.add('active');
+                // Poll every 5 seconds
+                setTimeout(checkStoreStatusForStaff, 5000);
+            }
+        }
+        
+        async function loadStaffOptions() {
+            console.log('👥 Loading staff options for dropdown');
+            
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('id, full_name')
+                .eq('role', 'staff')
+                .eq('status', 'active')
+                .order('full_name');
+            
+            if (error) {
+                console.error('❌ Error loading staff options:', error);
+                return;
+            }
+            
+            console.log('✅ Staff options loaded:', data);
+            
+            const select = document.getElementById('staff-select');
+            select.innerHTML = '<option value="">-- เลือกชื่อ --</option>' +
+                data.map(staff => `<option value="${staff.id}">${staff.full_name}</option>`).join('');
+        }
+        
+        async function staffLogin(event) {
+            event.preventDefault();
+            console.log('🔐 Staff login attempt');
+            
+            const userId = document.getElementById('staff-select').value;
+            const pin = document.getElementById('staff-pin').value;
+            
+            try {
+                const response = await fetch(EDGE_FUNCTION_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_ANON_KEY
+                    },
+                    body: JSON.stringify({ userId, pin })
+                });
+                
+                const result = await response.json();
+                console.log('📡 Edge function response:', result);
+                
+                if (!result.success) {
+                    console.error('❌ Staff login failed:', result.error);
+                    showError('staff-login-error', result.error);
+                    return;
+                }
+                
+                // Set session from edge function
+                const { error: sessionError } = await supabase.auth.setSession({
+                    access_token: result.session.access_token,
+                    refresh_token: result.session.refresh_token
+                });
+                
+                if (sessionError) {
+                    console.error('❌ Error setting session:', sessionError);
+                    showError('staff-login-error', sessionError.message);
+                    return;
+                }
+                
+                console.log('✅ Staff login success');
+                
+                // Get staff profile
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('full_name, role, status')
+                    .eq('id', userId)
+                    .single();
+                
+                currentUser = { id: userId, profile };
+                showStaffPOS();
+                
+            } catch (error) {
+                console.error('❌ Staff login error:', error);
+                showError('staff-login-error', 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ');
+            }
+        }
+        
+        async function showStaffPOS() {
+            console.log('📱 Showing staff POS screen');
+            document.getElementById('staff-login').classList.remove('active');
+            document.getElementById('staff-pos').classList.add('active');
+            
+            document.getElementById('current-staff-name').textContent = currentUser.profile.full_name;
+            await updateStoreStatus();
+            subscribeToStoreStatus();
+        }
+        
+        async function closeStore() {
+            console.log('🔒 Staff closing store');
+            
+            const { error } = await supabase
+                .from('store_status')
+                .update({ is_open: false })
+                .eq('id', 1);
+            
+            if (error) {
+                console.error('❌ Error closing store:', error);
+                showError('staff-message', error.message);
+                return;
+            }
+            
+            console.log('✅ Store closed successfully');
+            showSuccess('staff-message', 'ปิดร้านแล้ว');
+            await updateStoreStatus();
+        }
+        
+        // ==================== Real-time Subscription ====================
+        function subscribeToStoreStatus() {
+            console.log('🔔 Subscribing to store status changes');
+            
+            if (storeStatusSubscription) {
+                supabase.removeChannel(storeStatusSubscription);
+            }
+            
+            storeStatusSubscription = supabase
+                .channel('store-status-changes')
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'UPDATE',
+                        schema: 'public',
+                        table: 'store_status'
+                    },
+                    async (payload) => {
+                        console.log('🔔 Store status changed:', payload);
+                        await updateStoreStatus();
+                        
+                        // If staff and store closed, redirect to waiting screen
+                        if (currentMode === 'staff' && !payload.new.is_open) {
+                            console.log('🔒 Store closed, redirecting staff to waiting screen');
+                            document.getElementById('staff-pos').classList.remove('active');
+                            logout();
+                            checkStoreStatusForStaff();
+                        }
+                    }
+                )
+                .subscribe();
+        }
+        
+        // ==================== Utility Functions ====================
+        async function logout() {
+            console.log('👋 Logging out');
+            
+            if (storeStatusSubscription) {
+                supabase.removeChannel(storeStatusSubscription);
+                storeStatusSubscription = null;
+            }
+            
+            await supabase.auth.signOut();
+            currentUser = null;
+            
+            // Clear forms
+            document.getElementById('manager-email').value = '';
+            document.getElementById('manager-password').value = '';
+            document.getElementById('staff-pin').value = '';
+            
+            // Clear messages
+            clearMessages();
+            
+            // Show appropriate login screen
+            if (currentMode === 'manager') {
+                document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+                document.getElementById('manager-login').classList.add('active');
+            } else {
+                checkStoreStatusForStaff();
+            }
+        }
+        
+        function showError(elementId, message) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="error">❌ ${message}</div>`;
+            setTimeout(() => element.innerHTML = '', 5000);
+        }
+        
+        function showSuccess(elementId, message) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="success">✅ ${message}</div>`;
+            setTimeout(() => element.innerHTML = '', 3000);
+        }
+        
+        function clearMessages() {
+            ['manager-login-error', 'manager-message', 'staff-login-error', 'staff-message'].forEach(id => {
+                const element = document.getElementById(id);
+                if (element) element.innerHTML = '';
+            });
+        }
+        
+        // ==================== Initialize ====================
+        console.log('🚀 POS Test App Initialized');
+        console.log('⚠️ Remember to set your SUPABASE_ANON_KEY in the script!');
+    </script>
+</body>
+</html>
