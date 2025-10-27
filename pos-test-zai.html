@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POS System Test Harness</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; padding: 20px; background-color: #f4f4f4; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1, h2 { color: #333; }
+        .zone { border: 1px solid #ddd; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
+        .zone h2 { margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        input[type="text"], input[type="email"], input[type="password"] { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { padding: 10px 15px; border: none; background-color: #007bff; color: white; border-radius: 4px; cursor: pointer; margin-right: 10px; margin-bottom: 5px; }
+        button:hover { background-color: #0056b3; }
+        button.danger { background-color: #dc3545; }
+        button.danger:hover { background-color: #c82333; }
+        button.success { background-color: #28a745; }
+        button.success:hover { background-color: #218838; }
+        #results { background-color: #2d2d2d; color: #f0f0f0; padding: 15px; border-radius: 5px; white-space: pre-wrap; font-family: 'Courier New', Courier, monospace; max-height: 400px; overflow-y: scroll; }
+        .log-info { color: #17a2b8; }
+        .log-success { color: #28a745; }
+        .log-error { color: #dc3545; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>POS System Test Harness</h1>
+    <p>หน้าจอนี้ใช้สำหรับทดสอบการทำงานของ Backend (Supabase) ทุกอย่างก่อนจะสร้าง PWA จริง</p>
+
+    <div id="results">--- Log ---\n</div>
+
+    <div class="zone">
+        <h2>Manager Zone</h2>
+        <input type="email" id="managerEmail" placeholder="Manager Email (e.g., manager@test.com)">
+        <input type="password" id="managerPass" placeholder="Manager Password">
+        <button onclick="testManagerLogin()">1. Manager Login</button>
+        <button onclick="testLogout()">Logout</button>
+        <hr>
+        <button onclick="testOpenStore()">2. Open Store (Should Succeed)</button>
+        <button onclick="testCloseStore()">3. Close Store</button>
+        <hr>
+        <h4>Manage Staff Status</h4>
+        <input type="text" id="staffIdToManage" placeholder="Staff UUID to Ban/Unban">
+        <button class="danger" onclick="testBanStaff()">4. Ban Staff</button>
+        <button class="success" onclick="testUnbanStaff()">5. Unban Staff</button>
+    </div>
+
+    <div class="zone">
+        <h2>Staff Zone</h2>
+        <input type="text" id="staffId" placeholder="Staff UUID (e.g., xxxxxxx-xxxx-xxxx-xxxx)">
+        <input type="text" id="staffPin" placeholder="6-digit PIN">
+        <button onclick="testStaffLogin()">1. Staff Login (via PIN)</button>
+        <button onclick="testLogout()">Logout</button>
+        <hr>
+        <button onclick="testOpenStore()">2. Open Store (Should FAIL)</button>
+        <button onclick="testCloseStore()">3. Close Store (Should Succeed)</button>
+    </div>
+
+    <div class="zone">
+        <h2>Global Checks</h2>
+        <button onclick="checkStoreStatus()">Check Store Status</button>
+        <button onclick="checkMyProfile()">Check My Profile</button>
+    </div>
+</div>
+
+<!-- Supabase JS Client -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+    // =====================================================
+    // CONFIGURATION - แก้ไขค่าส่วนนี้
+    // =====================================================
+    const SUPABASE_URL = 'https://qtzvwwfczruwjzpwtgor.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0enZ3d2ZjenJ1d2p6cHd0Z29yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTE1NjAsImV4cCI6MjA3NzA2NzU2MH0.oxHzSpmd3wgffCI-xN_1xkArliG6OQePsXwbDCDYrKk'; // << ใส่ Anon Key ของคุณตรงนี้
+    const EDGE_FUNCTION_URL = 'https://qtzvwwfczruwjzpwtgor.supabase.co/functions/v1/login-with-pin';
+
+    // สร้าง Supabase Client
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // =====================================================
+    // HELPER FUNCTIONS
+    // =====================================================
+    const resultsDiv = document.getElementById('results');
+
+    function log(message, type = 'info') {
+        const timestamp = new Date().toLocaleTimeString();
+        let className = `log-${type}`;
+        resultsDiv.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+        resultsDiv.scrollTop = resultsDiv.scrollHeight; // Auto-scroll
+    }
+
+    // =====================================================
+    // TEST FUNCTIONS
+    // =====================================================
+
+    async function testManagerLogin() {
+        const email = document.getElementById('managerEmail').value;
+        const password = document.getElementById('managerPass').value;
+        if (!email || !password) { log('Error: กรุณาใส่ Email และ Password', 'error'); return; }
+
+        log(`Attempting manager login for ${email}...`, 'info');
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+
+        if (error) {
+            log(`Manager Login FAILED: ${error.message}`, 'error');
+        } else {
+            log(`Manager Login SUCCESS! User: ${data.user.email}`, 'success');
+        }
+    }
+
+    async function testStaffLogin() {
+        const userId = document.getElementById('staffId').value;
+        const pin = document.getElementById('staffPin').value;
+        if (!userId || !pin) { log('Error: กรุณาใส่ Staff UUID และ PIN', 'error'); return; }
+
+        log(`Attempting staff login for user ${userId}...`, 'info');
+
+        try {
+            const response = await fetch(EDGE_FUNCTION_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+                body: JSON.stringify({ userId, pin })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                log(`Staff Login FAILED: ${result.error}`, 'error');
+                return;
+            }
+
+            log(`Staff Login SUCCESS!`, 'success');
+            log(`Setting session for user...`, 'info');
+            
+            // ใช้ session ที่ได้จาก Edge Function
+            const { error: sessionError } = await supabaseClient.auth.setSession(result.session);
+            
+            if (sessionError) {
+                log(`Failed to set session: ${sessionError.message}`, 'error');
+            } else {
+                 log(`Session set for user ${userId}`, 'success');
+            }
+
+        } catch (err) {
+            log(`Staff Login FAILED: Network or server error: ${err.message}`, 'error');
+        }
+    }
+
+    async function testLogout() {
+        log('Logging out...', 'info');
+        const { error } = await supabaseClient.auth.signOut();
+        if (error) {
+            log(`Logout FAILED: ${error.message}`, 'error');
+        } else {
+            log('Logout SUCCESS!', 'success');
+        }
+    }
+
+    async function testOpenStore() {
+        log('Attempting to OPEN store...', 'info');
+        const { data, error } = await supabaseClient.from('store_status').update({ is_open: true }).eq('id', 1).select();
+        if (error) {
+            log(`Open Store FAILED: ${error.message}`, 'error');
+        } else {
+            log(`Open Store SUCCESS! New status: ${JSON.stringify(data[0])}`, 'success');
+        }
+    }
+
+    async function testCloseStore() {
+        log('Attempting to CLOSE store...', 'info');
+        const { data, error } = await supabaseClient.from('store_status').update({ is_open: false }).eq('id', 1).select();
+        if (error) {
+            log(`Close Store FAILED: ${error.message}`, 'error');
+        } else {
+            log(`Close Store SUCCESS! New status: ${JSON.stringify(data[0])}`, 'success');
+        }
+    }
+
+    async function testBanStaff() {
+        const staffId = document.getElementById('staffIdToManage').value;
+        if (!staffId) { log('Error: กรุณาใส่ Staff UUID ที่ต้องการ Ban', 'error'); return; }
+        log(`Attempting to BAN staff ${staffId}...`, 'info');
+        const { data, error } = await supabaseClient.from('profiles').update({ status: 'banned' }).eq('id', staffId).select();
+        if (error) {
+            log(`Ban Staff FAILED: ${error.message}`, 'error');
+        } else {
+            log(`Ban Staff SUCCESS! New profile: ${JSON.stringify(data[0])}`, 'success');
+        }
+    }
+
+    async function testUnbanStaff() {
+        const staffId = document.getElementById('staffIdToManage').value;
+        if (!staffId) { log('Error: กรุณาใส่ Staff UUID ที่ต้องการ Unban', 'error'); return; }
+        log(`Attempting to UNBAN staff ${staffId}...`, 'info');
+        const { data, error } = await supabaseClient.from('profiles').update({ status: 'active' }).eq('id', staffId).select();
+        if (error) {
+            log(`Unban Staff FAILED: ${error.message}`, 'error');
+        } else {
+            log(`Unban Staff SUCCESS! New profile: ${JSON.stringify(data[0])}`, 'success');
+        }
+    }
+
+    async function checkStoreStatus() {
+        log('Checking store status...', 'info');
+        const { data, error } = await supabaseClient.from('store_status').select('*');
+        if (error) {
+            log(`Check Status FAILED: ${error.message}`, 'error');
+        } else {
+            log(`Store Status: ${JSON.stringify(data[0])}`, 'success');
+        }
+    }
+
+    async function checkMyProfile() {
+        log('Checking current user profile...', 'info');
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) {
+            log('No user is logged in.', 'error');
+            return;
+        }
+        const { data, error } = await supabaseClient.from('profiles').select('*').eq('id', user.id).single();
+        if (error) {
+            log(`Check Profile FAILED: ${error.message}`, 'error');
+        } else {
+            log(`My Profile: ${JSON.stringify(data)}`, 'success');
+        }
+    }
+
+    // Initial check on page load
+    window.onload = () => {
+        log('Test Harness Loaded. Configure your keys and start testing.', 'info');
+    }
+</script>
+
+</body>
+</html>
