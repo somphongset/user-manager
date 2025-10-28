@@ -1,0 +1,168 @@
+<!-- Supabase JS Client -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+    // =====================================================
+    // CONFIGURATION - แก้ไขค่าส่วนนี้
+    // =====================================================
+    const SUPABASE_URL = 'https://qtzvwwfczruwjzpwtgor.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0enZ3d2ZjenJ1d2p6cHd0Z29yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTE1NjAsImV4cCI6MjA3NzA2NzU2MH0.oxHzSpmd3wgffCI-xN_1xkArliG6OQePsXwbDCDYrKk'; // << ใส่ Anon Key ของคุณตรงนี้
+    // เปลี่ยนชื่อ Edge Function ที่นี่!
+    const EDGE_FUNCTION_URL = 'https://qtzvwwfczruwjzpwtgor.supabase.co/functions/v1/create-staff-session';
+
+    // สร้าง Supabase Client
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // =====================================================
+    // HELPER FUNCTIONS
+    // =====================================================
+    const resultsDiv = document.getElementById('results');
+
+    function log(message, type = 'info') {
+        const timestamp = new Date().toLocaleTimeString();
+        let className = `log-${type}`;
+        resultsDiv.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+        resultsDiv.scrollTop = resultsDiv.scrollHeight; // Auto-scroll
+    }
+
+    // =====================================================
+    // TEST FUNCTIONS
+    // =====================================================
+
+    async function testManagerLogin() {
+        const email = document.getElementById('managerEmail').value;
+        const password = document.getElementById('managerPass').value;
+        if (!email || !password) { log('Error: กรุณาใส่ Email และ Password', 'error'); return; }
+
+        log(`Attempting manager login for ${email}...`, 'info');
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+
+        if (error) {
+            log(`Manager Login FAILED: ${error.message}`, 'error');
+        } else {
+            log(`Manager Login SUCCESS! User: ${data.user.email}`, 'success');
+        }
+    }
+
+    async function testStaffLogin() {
+        const userId = document.getElementById('staffId').value;
+        const pin = document.getElementById('staffPin').value;
+        if (!userId || !pin) { log('Error: กรุณาใส่ Staff UUID และ PIN', 'error'); return; }
+
+        log(`Attempting staff login for user ${userId}...`, 'info');
+
+        try {
+            const response = await fetch(EDGE_FUNCTION_URL + '?t=' + Date.now(), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+                body: JSON.stringify({ userId, pin })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                log(`Staff Login FAILED: ${result.error}`, 'error');
+                return;
+            }
+
+            log(`Staff Login SUCCESS!`, 'success');
+            log(`Setting session for user...`, 'info');
+            
+            // ใช้ session ที่ได้จาก Edge Function
+            const { error: sessionError } = await supabaseClient.auth.setSession(result.session);
+            
+            if (sessionError) {
+                log(`Failed to set session: ${sessionError.message}`, 'error');
+            } else {
+                 log(`Session set for user ${userId}`, 'success');
+            }
+
+        } catch (err) {
+            log(`Staff Login FAILED: Network or server error: ${err.message}`, 'error');
+        }
+    }
+
+    async function testLogout() {
+        log('Logging out...', 'info');
+        const { error } = await supabaseClient.auth.signOut();
+        if (error) {
+            log(`Logout FAILED: ${error.message}`, 'error');
+        } else {
+            log('Logout SUCCESS!', 'success');
+        }
+    }
+
+    async function testOpenStore() {
+        log('Attempting to OPEN store...', 'info');
+        const { data, error } = await supabaseClient.from('store_status').update({ is_open: true }).eq('id', 1).select();
+        if (error) {
+            log(`Open Store FAILED: ${error.message}`, 'error');
+        } else {
+            log(`Open Store SUCCESS! New status: ${JSON.stringify(data[0])}`, 'success');
+        }
+    }
+
+    async function testCloseStore() {
+        log('Attempting to CLOSE store...', 'info');
+        const { data, error } = await supabaseClient.from('store_status').update({ is_open: false }).eq('id', 1).select();
+        if (error) {
+            log(`Close Store FAILED: ${error.message}`, 'error');
+        } else {
+            log(`Close Store SUCCESS! New status: ${JSON.stringify(data[0])}`, 'success');
+        }
+    }
+
+    async function testBanStaff() {
+        const staffId = document.getElementById('staffIdToManage').value;
+        if (!staffId) { log('Error: กรุณาใส่ Staff UUID ที่ต้องการ Ban', 'error'); return; }
+        log(`Attempting to BAN staff ${staffId}...`, 'info');
+        const { data, error } = await supabaseClient.from('profiles').update({ status: 'banned' }).eq('id', staffId).select();
+        if (error) {
+            log(`Ban Staff FAILED: ${error.message}`, 'error');
+        } else {
+            log(`Ban Staff SUCCESS! New profile: ${JSON.stringify(data[0])}`, 'success');
+        }
+    }
+
+    async function testUnbanStaff() {
+        const staffId = document.getElementById('staffIdToManage').value;
+        if (!staffId) { log('Error: กรุณาใส่ Staff UUID ที่ต้องการ Unban', 'error'); return; }
+        log(`Attempting to UNBAN staff ${staffId}...`, 'info');
+        const { data, error } = await supabaseClient.from('profiles').update({ status: 'active' }).eq('id', staffId).select();
+        if (error) {
+            log(`Unban Staff FAILED: ${error.message}`, 'error');
+        } else {
+            log(`Unban Staff SUCCESS! New profile: ${JSON.stringify(data[0])}`, 'success');
+        }
+    }
+
+    async function checkStoreStatus() {
+        log('Checking store status...', 'info');
+        const { data, error } = await supabaseClient.from('store_status').select('*');
+        if (error) {
+            log(`Check Status FAILED: ${error.message}`, 'error');
+        } else {
+            log(`Store Status: ${JSON.stringify(data[0])}`, 'success');
+        }
+    }
+
+    async function checkMyProfile() {
+        log('Checking current user profile...', 'info');
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        if (!user) {
+            log('No user is logged in.', 'error');
+            return;
+        }
+        const { data, error } = await supabaseClient.from('profiles').select('*').eq('id', user.id).single();
+        if (error) {
+            log(`Check Profile FAILED: ${error.message}`, 'error');
+        } else {
+            log(`My Profile: ${JSON.stringify(data)}`, 'success');
+        }
+    }
+
+    // Initial check on page load
+    window.onload = () => {
+        log('Test Harness Loaded. Configure your keys and start testing.', 'info');
+    }
+</script>
