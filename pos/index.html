@@ -1,6 +1,6 @@
-# 4.3 File: pos/index.html (โครงสร้างพื้นฐาน)
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -10,6 +10,7 @@
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#198754">
 </head>
+
 <body class="bg-light">
   <div id="waiting-screen" class="d-flex align-items-center justify-content-center min-vh-100 text-center">
     <div>
@@ -39,7 +40,8 @@
             </div>
             <button type="submit" id="login-btn" class="btn btn-success w-100 py-2">
               <span id="login-btn-text">เข้าสู่ระบบ</span>
-              <span id="login-btn-spinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+              <span id="login-btn-spinner" class="spinner-border spinner-border-sm d-none" role="status"
+                aria-hidden="true"></span>
             </button>
           </form>
           <div id="login-error" class="alert alert-danger mt-3 text-center d-none" role="alert"></div>
@@ -52,8 +54,10 @@
       <div class="container-fluid">
         <a class="navbar-brand fw-bold" href="#"><i class="bi bi-cash-stack me-2"></i>POS Terminal</a>
         <div class="d-flex">
-          <button id="close-store-btn" class="btn btn-outline-light me-2"><i class="bi bi-door-closed me-1"></i>ปิดร้าน</button>
-          <button id="logout-btn" class="btn btn-outline-light"><i class="bi bi-box-arrow-right me-1"></i>ออกจากระบบ</button>
+          <button id="close-store-btn" class="btn btn-outline-light me-2"><i
+              class="bi bi-door-closed me-1"></i>ปิดร้าน</button>
+          <button id="logout-btn" class="btn btn-outline-light"><i
+              class="bi bi-box-arrow-right me-1"></i>ออกจากระบบ</button>
         </div>
       </div>
     </nav>
@@ -64,7 +68,14 @@
       </div>
     </main>
   </div>
-  <div class="toast-container position-fixed bottom-0 end-0 p-3"><div id="message-toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true"><div class="toast-header"><i class="bi bi-info-circle-fill text-primary me-2"></i><strong class="me-auto" id="toast-title">แจ้งเตือน</strong><button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button></div><div class="toast-body" id="toast-message"></div></div></div>
+  <div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="message-toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="toast-header"><i class="bi bi-info-circle-fill text-primary me-2"></i><strong class="me-auto"
+          id="toast-title">แจ้งเตือน</strong><button type="button" class="btn-close" data-bs-dismiss="toast"
+          aria-label="Close"></button></div>
+      <div class="toast-body" id="toast-message"></div>
+    </div>
+  </div>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script type="module">
     // ใส่ค่า Supabase ของคุณที่นี่
@@ -76,11 +87,80 @@
     let currentUser = null;
     const waitingScreen = document.getElementById('waiting-screen'); const loginScreen = document.getElementById('login-screen'); const posScreen = document.getElementById('pos-screen'); const loginForm = document.getElementById('login-form'); const staffSelect = document.getElementById('staff-select'); const pinInput = document.getElementById('pin-input'); const loginBtn = document.getElementById('login-btn'); const loginBtnText = document.getElementById('login-btn-text'); const loginBtnSpinner = document.getElementById('login-btn-spinner'); const loginError = document.getElementById('login-error'); const closeStoreBtn = document.getElementById('close-store-btn'); const logoutBtn = document.getElementById('logout-btn');
     const messageToast = document.getElementById('message-toast'); const toastTitle = document.getElementById('toast-title'); const toastMessage = document.getElementById('toast-message'); const toastBootstrap = new bootstrap.Toast(messageToast);
-    function showMessage(text, type = 'info') { toastMessage.textContent = text; const toastHeader = messageToast.querySelector('.toast-header i'); toastHeader.className = 'bi me-2'; switch(type) { case 'success': toastHeader.classList.add('bi-check-circle-fill', 'text-success'); toastTitle.textContent = 'สำเร็จ'; break; case 'error': toastHeader.classList.add('bi-exclamation-triangle-fill', 'text-danger'); toastTitle.textContent = 'ข้อผิดพลาด'; break; default: toastHeader.classList.add('bi-info-circle-fill', 'text-primary'); toastTitle.textContent = 'แจ้งเตือน'; } toastBootstrap.show(); }
+    function showMessage(text, type = 'info') { toastMessage.textContent = text; const toastHeader = messageToast.querySelector('.toast-header i'); toastHeader.className = 'bi me-2'; switch (type) { case 'success': toastHeader.classList.add('bi-check-circle-fill', 'text-success'); toastTitle.textContent = 'สำเร็จ'; break; case 'error': toastHeader.classList.add('bi-exclamation-triangle-fill', 'text-danger'); toastTitle.textContent = 'ข้อผิดพลาด'; break; default: toastHeader.classList.add('bi-info-circle-fill', 'text-primary'); toastTitle.textContent = 'แจ้งเตือน'; } toastBootstrap.show(); }
     function toggleScreens(screen) { waitingScreen.classList.add('d-none'); loginScreen.classList.add('d-none'); posScreen.classList.add('d-none'); if (screen === 'waiting') waitingScreen.classList.remove('d-none'); if (screen === 'login') loginScreen.classList.remove('d-none'); if (screen === 'pos') posScreen.classList.remove('d-none'); }
     async function checkStoreStatus() { const { data, error } = await supabase.from('store_status').select('is_open').eq('id', 1).single(); if (error) { console.error('Error checking store status:', error); toggleScreens('waiting'); return; } if (data.is_open) { toggleScreens('login'); loadStaffList(); } else { toggleScreens('waiting'); } }
     async function loadStaffList() { const { data, error } = await supabase.from('profiles').select('id, full_name').eq('role', 'staff').eq('status', 'active'); staffSelect.innerHTML = ''; if (error) { staffSelect.innerHTML = '<option value="" disabled>ไม่สามารถโหลดข้อมูลได้</option>'; return; } if (data.length === 0) { staffSelect.innerHTML = '<option value="" disabled>ไม่มีพนักงานในระบบ</option>'; return; } staffSelect.innerHTML = '<option value="" selected disabled>เลือกพนักงาน...</option>'; data.forEach(staff => { const option = document.createElement('option'); option.value = staff.id; option.textContent = staff.full_name; staffSelect.appendChild(option); }); }
-    async function handleLogin(e) { e.preventDefault(); const userId = staffSelect.value; const pin = pinInput.value; if (!userId || !pin) { showMessage('กรุณาเลือกพนักงานและกรอกรหัส PIN', 'error'); return; } loginBtn.disabled = true; loginBtnText.textContent = 'กำลังเข้าสู่ระบบ...'; loginBtnSpinner.classList.remove('d-none'); loginError.classList.add('d-none'); try { const res = await fetch(LOGIN_FUNCTION_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, pin }) }); const result = await res.json(); if (res.ok && result.success) { const { data, error } = await supabase.auth.setSession(result.session.access_token, result.session.refresh_token); if (error) throw error; currentUser = result.session.user; toggleScreens('pos'); showMessage('เข้าสู่ระบบสำเร็จ', 'success'); } else { throw new Error(result.error || 'Login failed'); } } catch (err) { loginError.textContent = 'เข้าสู่ระบบล้มเหลว: ' + err.message; loginError.classList.remove('d-none'); } finally { loginBtn.disabled = false; loginBtnText.textContent = 'เข้าสู่ระบบ'; loginBtnSpinner.classList.add('d-none'); } }
+    async function handleLogin(e) {
+  e.preventDefault();
+  const userId = staffSelect.value;
+  const pin = pinInput.value;
+
+  if (!userId || !pin) {
+    showMessage('กรุณาเลือกพนักงานและกรอกรหัส PIN', 'error');
+    return;
+  }
+
+  loginBtn.disabled = true;
+  loginBtnText.textContent = 'กำลังเข้าสู่ระบบ...';
+  loginBtnSpinner.classList.remove('d-none');
+  loginError.classList.add('d-none');
+
+  try {
+    const res = await fetch(LOGIN_FUNCTION_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ userId, pin }),
+    });
+
+    const result = await res.json();
+
+    // --- เพิ่มการ Debug เพื่อตรวจสอบผลลัพธ์จาก Edge Function ---
+    console.log('Response from Edge Function:', result);
+    console.log('Response OK:', res.ok);
+
+    if (res.ok && result.success) {
+      // --- เพิ่มการตรวจสอบว่า Session มีอยู่จริงหรือไม่ ---
+      if (!result.session || !result.session.access_token || !result.session.refresh_token) {
+        throw new Error('Server did not return a valid session. Response: ' + JSON.stringify(result));
+      }
+
+      console.log('Attempting to set session with tokens:', {
+        access_token: result.session.access_token.substring(0, 10) + '...',
+        refresh_token: result.session.refresh_token.substring(0, 10) + '...'
+      });
+
+      // ตั้งค่า Session ให้กับ Supabase Client
+      const { data, error } = await supabase.auth.setSession(
+        result.session.access_token,
+        result.session.refresh_token
+      );
+
+      if (error) {
+        // แสดงข้อผิดพลาดที่ชัดเจนยิ่งขึ้น
+        console.error('Error setting session:', error);
+        throw new Error(`Failed to set session: ${error.message}`);
+      }
+
+      console.log('Session set successfully:', data);
+      currentUser = data.user;
+      toggleScreens('pos');
+      showMessage('เข้าสู่ระบบสำเร็จ', 'success');
+    } else {
+      throw new Error(result.error || 'Login failed');
+    }
+  } catch (err) {
+    console.error('Full login error:', err);
+    loginError.textContent = 'เข้าสู่ระบบล้มเหลว: ' + err.message;
+    loginError.classList.remove('d-none');
+  } finally {
+    loginBtn.disabled = false;
+    loginBtnText.textContent = 'เข้าสู่ระบบ';
+    loginBtnSpinner.classList.add('d-none');
+  }
+}
     async function handleCloseStore() { if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการปิดร้าน?')) return; const { error } = await supabase.from('store_status').update({ is_open: false }).eq('id', 1); if (error) { showMessage('ปิดร้านล้มเหลว: ' + error.message, 'error'); } else { await supabase.auth.signOut(); toggleScreens('waiting'); showMessage('ร้านปิดเรียบร้อยแล้ว', 'success'); } }
     async function handleLogout() { await supabase.auth.signOut(); toggleScreens('login'); showMessage('ออกจากระบบแล้ว', 'info'); }
     loginForm.addEventListener('submit', handleLogin); closeStoreBtn.addEventListener('click', handleCloseStore); logoutBtn.addEventListener('click', handleLogout);
@@ -89,4 +169,5 @@
     checkStoreStatus();
   </script>
 </body>
+
 </html>
