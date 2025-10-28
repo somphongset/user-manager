@@ -1,0 +1,92 @@
+# 4.3 File: pos/index.html (โครงสร้างพื้นฐาน)
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Staff POS App</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#198754">
+</head>
+<body class="bg-light">
+  <div id="waiting-screen" class="d-flex align-items-center justify-content-center min-vh-100 text-center">
+    <div>
+      <i class="bi bi-shop text-muted" style="font-size: 4rem;"></i>
+      <h2 class="mt-3">ร้านยังไม่เปิด</h2>
+      <p class="text-muted">กรุณารอสักครู่ หรือติดต่อผู้จัดการ</p>
+    </div>
+  </div>
+  <div id="login-screen" class="d-none">
+    <div class="container d-flex align-items-center justify-content-center min-vh-100">
+      <div class="card shadow-lg border-0" style="width: 100%; max-width: 400px;">
+        <div class="card-body p-4 p-md-5">
+          <div class="text-center mb-4">
+            <i class="bi bi-person-fill text-success" style="font-size: 3rem;"></i>
+            <h1 class="fw-bold mt-3">Staff Login</h1>
+          </div>
+          <form id="login-form">
+            <div class="mb-3">
+              <label for="staff-select" class="form-label">เลือกชื่อพนักงาน</label>
+              <select id="staff-select" class="form-select" required>
+                <option value="" selected disabled>กำลังโหลด...</option>
+              </select>
+            </div>
+            <div class="mb-4">
+              <label for="pin-input" class="form-label">รหัส PIN</label>
+              <input type="password" id="pin-input" class="form-control" maxlength="6" required>
+            </div>
+            <button type="submit" id="login-btn" class="btn btn-success w-100 py-2">
+              <span id="login-btn-text">เข้าสู่ระบบ</span>
+              <span id="login-btn-spinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+            </button>
+          </form>
+          <div id="login-error" class="alert alert-danger mt-3 text-center d-none" role="alert"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="pos-screen" class="d-none">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-success shadow">
+      <div class="container-fluid">
+        <a class="navbar-brand fw-bold" href="#"><i class="bi bi-cash-stack me-2"></i>POS Terminal</a>
+        <div class="d-flex">
+          <button id="close-store-btn" class="btn btn-outline-light me-2"><i class="bi bi-door-closed me-1"></i>ปิดร้าน</button>
+          <button id="logout-btn" class="btn btn-outline-light"><i class="bi bi-box-arrow-right me-1"></i>ออกจากระบบ</button>
+        </div>
+      </div>
+    </nav>
+    <main class="container-fluid p-4">
+      <div class="text-center mt-5">
+        <h1>หน้าจอขาย</h1>
+        <p class="text-muted">ส่วนนี้สำหรับสร้างรายการขาย</p>
+      </div>
+    </main>
+  </div>
+  <div class="toast-container position-fixed bottom-0 end-0 p-3"><div id="message-toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true"><div class="toast-header"><i class="bi bi-info-circle-fill text-primary me-2"></i><strong class="me-auto" id="toast-title">แจ้งเตือน</strong><button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button></div><div class="toast-body" id="toast-message"></div></div></div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script type="module">
+    // ใส่ค่า Supabase ของคุณที่นี่
+    const SUPABASE_URL = 'https://qtzvwwfczruwjzpwtgor.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0enZ3d2ZjenJ1d2p6cHd0Z29yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTE1NjAsImV4cCI6MjA3NzA2NzU2MH0.oxHzSpmd3wgffCI-xN_1xkArliG6OQePsXwbDCDYrKk';
+    const LOGIN_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/login-with-pin`;
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    let currentUser = null;
+    const waitingScreen = document.getElementById('waiting-screen'); const loginScreen = document.getElementById('login-screen'); const posScreen = document.getElementById('pos-screen'); const loginForm = document.getElementById('login-form'); const staffSelect = document.getElementById('staff-select'); const pinInput = document.getElementById('pin-input'); const loginBtn = document.getElementById('login-btn'); const loginBtnText = document.getElementById('login-btn-text'); const loginBtnSpinner = document.getElementById('login-btn-spinner'); const loginError = document.getElementById('login-error'); const closeStoreBtn = document.getElementById('close-store-btn'); const logoutBtn = document.getElementById('logout-btn');
+    const messageToast = document.getElementById('message-toast'); const toastTitle = document.getElementById('toast-title'); const toastMessage = document.getElementById('toast-message'); const toastBootstrap = new bootstrap.Toast(messageToast);
+    function showMessage(text, type = 'info') { toastMessage.textContent = text; const toastHeader = messageToast.querySelector('.toast-header i'); toastHeader.className = 'bi me-2'; switch(type) { case 'success': toastHeader.classList.add('bi-check-circle-fill', 'text-success'); toastTitle.textContent = 'สำเร็จ'; break; case 'error': toastHeader.classList.add('bi-exclamation-triangle-fill', 'text-danger'); toastTitle.textContent = 'ข้อผิดพลาด'; break; default: toastHeader.classList.add('bi-info-circle-fill', 'text-primary'); toastTitle.textContent = 'แจ้งเตือน'; } toastBootstrap.show(); }
+    function toggleScreens(screen) { waitingScreen.classList.add('d-none'); loginScreen.classList.add('d-none'); posScreen.classList.add('d-none'); if (screen === 'waiting') waitingScreen.classList.remove('d-none'); if (screen === 'login') loginScreen.classList.remove('d-none'); if (screen === 'pos') posScreen.classList.remove('d-none'); }
+    async function checkStoreStatus() { const { data, error } = await supabase.from('store_status').select('is_open').eq('id', 1).single(); if (error) { console.error('Error checking store status:', error); toggleScreens('waiting'); return; } if (data.is_open) { toggleScreens('login'); loadStaffList(); } else { toggleScreens('waiting'); } }
+    async function loadStaffList() { const { data, error } = await supabase.from('profiles').select('id, full_name').eq('role', 'staff').eq('status', 'active'); staffSelect.innerHTML = ''; if (error) { staffSelect.innerHTML = '<option value="" disabled>ไม่สามารถโหลดข้อมูลได้</option>'; return; } if (data.length === 0) { staffSelect.innerHTML = '<option value="" disabled>ไม่มีพนักงานในระบบ</option>'; return; } staffSelect.innerHTML = '<option value="" selected disabled>เลือกพนักงาน...</option>'; data.forEach(staff => { const option = document.createElement('option'); option.value = staff.id; option.textContent = staff.full_name; staffSelect.appendChild(option); }); }
+    async function handleLogin(e) { e.preventDefault(); const userId = staffSelect.value; const pin = pinInput.value; if (!userId || !pin) { showMessage('กรุณาเลือกพนักงานและกรอกรหัส PIN', 'error'); return; } loginBtn.disabled = true; loginBtnText.textContent = 'กำลังเข้าสู่ระบบ...'; loginBtnSpinner.classList.remove('d-none'); loginError.classList.add('d-none'); try { const res = await fetch(LOGIN_FUNCTION_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, pin }) }); const result = await res.json(); if (res.ok && result.success) { const { data, error } = await supabase.auth.setSession(result.session.access_token, result.session.refresh_token); if (error) throw error; currentUser = result.session.user; toggleScreens('pos'); showMessage('เข้าสู่ระบบสำเร็จ', 'success'); } else { throw new Error(result.error || 'Login failed'); } } catch (err) { loginError.textContent = 'เข้าสู่ระบบล้มเหลว: ' + err.message; loginError.classList.remove('d-none'); } finally { loginBtn.disabled = false; loginBtnText.textContent = 'เข้าสู่ระบบ'; loginBtnSpinner.classList.add('d-none'); } }
+    async function handleCloseStore() { if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการปิดร้าน?')) return; const { error } = await supabase.from('store_status').update({ is_open: false }).eq('id', 1); if (error) { showMessage('ปิดร้านล้มเหลว: ' + error.message, 'error'); } else { await supabase.auth.signOut(); toggleScreens('waiting'); showMessage('ร้านปิดเรียบร้อยแล้ว', 'success'); } }
+    async function handleLogout() { await supabase.auth.signOut(); toggleScreens('login'); showMessage('ออกจากระบบแล้ว', 'info'); }
+    loginForm.addEventListener('submit', handleLogin); closeStoreBtn.addEventListener('click', handleCloseStore); logoutBtn.addEventListener('click', handleLogout);
+    // เริ่มต้นการทำงาน
+    setInterval(checkStoreStatus, 5000); // ตรวจสอบสถานะร้านทุก 5 วินาที
+    checkStoreStatus();
+  </script>
+</body>
+</html>
