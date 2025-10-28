@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manager App</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.1/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#3b82f6">
+</head>
+<body class="bg-gray-100 min-h-screen font-sans">
+
+  <!-- === หน้าจอ Login === -->
+  <div id="login-screen" class="flex items-center justify-center min-h-screen">
+    <div class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
+      <h1 class="text-3xl font-bold text-center mb-6 text-blue-600">Manager Login</h1>
+      <form id="login-form">
+        <div class="mb-4">
+          <label for="email" class="block text-gray-700 text-sm font-bold mb-2">อีเมล</label>
+          <input type="email" id="email" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="mb-6">
+          <label for="password" class="block text-gray-700 text-sm font-bold mb-2">รหัสผ่าน</label>
+          <input type="password" id="password" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <button type="submit" id="login-btn" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300">
+          เข้าสู่ระบบ
+        </button>
+      </form>
+      <div id="login-error" class="mt-4 text-red-500 text-sm text-center hidden"></div>
+    </div>
+  </div>
+
+  <!-- === หน้าจอ Dashboard === -->
+  <div id="dashboard-screen" class="hidden">
+    <header class="bg-blue-600 text-white p-4 shadow-md">
+      <div class="container mx-auto flex justify-between items-center">
+        <h1 class="text-xl font-bold">Manager Dashboard</h1>
+        <button id="logout-btn" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg transition duration-300">
+          ออกจากระบบ
+        </button>
+      </div>
+    </header>
+
+    <main class="container mx-auto p-4 md:p-8">
+      <!-- ส่วนสถานะร้าน -->
+      <section class="bg-white p-6 rounded-lg shadow-md mb-6">
+        <h2 class="text-2xl font-semibold mb-4">สถานะร้าน</h2>
+        <div class="flex items-center justify-between">
+          <span id="store-status-text" class="text-lg font-medium">กำลังตรวจสอบ...</span>
+          <button id="toggle-store-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition duration-300" disabled>
+            โปรดรอ...
+          </button>
+        </div>
+      </section>
+
+      <!-- ส่วนจัดการพนักงาน -->
+      <section class="bg-white p-6 rounded-lg shadow-md mb-6">
+        <h2 class="text-2xl font-semibold mb-4">จัดการพนักงาน</h2>
+        <div id="staff-list" class="space-y-3">
+          <!-- รายชื่อพนักงานจะถูกสร้างที่นี่โดย JavaScript -->
+        </div>
+      </section>
+
+      <!-- ส่วนรีเซ็ตรหัสผ่าน -->
+      <section class="bg-white p-6 rounded-lg shadow-md">
+        <h2 class="text-2xl font-semibold mb-4">รีเซ็ตรหัสผ่านพนักงาน</h2>
+        <p class="text-gray-600 mb-4">การกระทำนี้จะเปลี่ยนรหัสผ่านสำหรับพนักงานทุกคนในระบบ</p>
+        <div class="flex items-end space-x-4">
+          <div class="flex-grow">
+            <label for="new-password" class="block text-gray-700 text-sm font-bold mb-2">รหัสผ่านใหม่</label>
+            <input type="password" id="new-password" placeholder="กรอกรหัสผ่านใหม่" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          <button id="reset-password-btn" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-6 rounded-lg transition duration-300">
+            รีเซ็ตรหัสผ่านทั้งหมด
+          </button>
+        </div>
+      </section>
+
+      <!-- ส่วนแสดงข้อความต่างๆ -->
+      <div id="message-box" class="fixed bottom-4 right-4 p-4 rounded-lg text-white font-semibold hidden"></div>
+    </main>
+  </div>
+
+  <script type="module">
+    // --- การตั้งค่า Supabase ---
+    // !!! สำคัญ: ให้แทนที่ค่าเหล่านี้ด้วยข้อมูลจริงของคุณ !!!
+    const SUPABASE_URL = 'https://qtzvwwfczruwjzpwtgor.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0enZ3d2ZjenJ1d2p6cHd0Z29yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTE1NjAsImV4cCI6MjA3NzA2NzU2MH0.oxHzSpmd3wgffCI-xN_1xkArliG6OQePsXwbDCDYrKk';
+    const RESET_PASSWORD_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/reset-password`;
+
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    let currentUser = null;
+
+    // --- DOM Elements ---
+    const loginScreen = document.getElementById('login-screen');
+    const dashboardScreen = document.getElementById('dashboard-screen');
+    const loginForm = document.getElementById('login-form');
+    const loginBtn = document.getElementById('login-btn');
+    const loginError = document.getElementById('login-error');
+    const logoutBtn = document.getElementById('logout-btn');
+    const storeStatusText = document.getElementById('store-status-text');
+    const toggleStoreBtn = document.getElementById('toggle-store-btn');
+    const staffList = document.getElementById('staff-list');
+    const resetPasswordBtn = document.getElementById('reset-password-btn');
+    const newPasswordInput = document.getElementById('new-password');
+    const messageBox = document.getElementById('message-box');
+
+    // --- ฟังก์ชันช่วยเหลือ ---
+    function showMessage(text, type = 'info') {
+      messageBox.textContent = text;
+      messageBox.className = `fixed bottom-4 right-4 p-4 rounded-lg text-white font-semibold ${type === 'error' ? 'bg-red-500' : type === 'success' ? 'bg-green-500' : 'bg-blue-500'}`;
+      messageBox.classList.remove('hidden');
+      setTimeout(() => messageBox.classList.add('hidden'), 3000);
+    }
+
+    function toggleScreens(showDashboard) {
+      if (showDashboard) {
+        loginScreen.classList.add('hidden');
+        dashboardScreen.classList.remove('hidden');
+      } else {
+        loginScreen.classList.remove('hidden');
+        dashboardScreen.classList.add('hidden');
+      }
+    }
+
+    // --- ฟังก์ชันหลัก ---
+    async function checkAuth() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        currentUser = session.user;
+        toggleScreens(true);
+        loadDashboardData();
+      } else {
+        toggleScreens(false);
+      }
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      loginBtn.disabled = true;
+      loginBtn.textContent = 'กำลังเข้าสู่ระบบ...';
+      loginError.classList.add('hidden');
+
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+      if (error) {
+        loginError.textContent = 'เข้าสู่ระบบล้มเหลว: ' + error.message;
+        loginError.classList.remove('hidden');
+      } else {
+        currentUser = data.user;
+        toggleScreens(true);
+        loadDashboardData();
+      }
+      loginBtn.disabled = false;
+      loginBtn.textContent = 'เข้าสู่ระบบ';
+    }
+
+    async function handleLogout() {
+      await supabase.auth.signOut();
+      currentUser = null;
+      toggleScreens(false);
+      loginForm.reset();
+    }
+
+    async function loadDashboardData() {
+      await Promise.all([loadStoreStatus(), loadStaffList()]);
+    }
+
+    async function loadStoreStatus() {
+      const { data, error } = await supabase.from('store_status').select('is_open').eq('id', 1).single();
+      if (error) {
+        showMessage('ไม่สามารถโหลดสถานะร้าน: ' + error.message, 'error');
+        return;
+      }
+      updateStoreStatusUI(data.is_open);
+    }
+
+    function updateStoreStatusUI(isOpen) {
+      storeStatusText.textContent = isOpen ? 'ร้านเปิดอยู่' : 'ร้านปิดอยู่';
+      if (isOpen) {
+        toggleStoreBtn.textContent = 'ปิดร้าน';
+        toggleStoreBtn.className = 'bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg transition duration-300';
+      } else {
+        toggleStoreBtn.textContent = 'เปิดร้าน';
+        toggleStoreBtn.className = 'bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition duration-300';
+      }
+      toggleStoreBtn.disabled = false;
+    }
+
+    async function handleToggleStore() {
+      const currentStatus = storeStatusText.textContent === 'ร้านเปิดอยู่';
+      const newStatus = !currentStatus;
+      toggleStoreBtn.disabled = true;
+      toggleStoreBtn.textContent = 'กำลังอัปเดต...';
+
+      const { error } = await supabase.from('store_status').update({ is_open: newStatus }).eq('id', 1);
+
+      if (error) {
+        showMessage('อัปเดตสถานะล้มเหลว: ' + error.message, 'error');
+        // โหลดสถานะใหม่เพื่อคืนค่าปุ่ม
+        await loadStoreStatus();
+      } else {
+        updateStoreStatusUI(newStatus);
+        showMessage(`ร้าน${newStatus ? 'เปิด' : 'ปิด'}เรียบร้อยแล้ว`, 'success');
+      }
+    }
+
+    async function loadStaffList() {
+      const { data, error } = await supabase.from('profiles').select('id, full_name, status').eq('role', 'staff');
+      staffList.innerHTML = '';
+      if (error) {
+        staffList.innerHTML = '<p class="text-red-500">ไม่สามารถโหลดรายชื่อพนักงานได้</p>';
+        return;
+      }
+      if (data.length === 0) {
+        staffList.innerHTML = '<p class="text-gray-500">ไม่มีพนักงานในระบบ</p>';
+        return;
+      }
+      data.forEach(staff => {
+        const staffCard = document.createElement('div');
+        staffCard.className = 'flex justify-between items-center p-4 border rounded-lg';
+        staffCard.innerHTML = `
+          <div>
+            <p class="font-semibold">${staff.full_name}</p>
+            <p class="text-sm ${staff.status === 'active' ? 'text-green-600' : 'text-red-600'}">สถานะ: ${staff.status === 'active' ? 'ใช้งานได้' : 'ระงับ'}</p>
+          </div>
+          <button data-user-id="${staff.id}" data-new-status="${staff.status === 'active' ? 'banned' : 'active'}" class="toggle-staff-btn px-4 py-2 rounded-lg text-white font-semibold ${staff.status === 'active' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'} transition duration-300">
+            ${staff.status === 'active' ? 'ระงับ' : 'เปิดใช้งาน'}
+          </button>
+        `;
+        staffList.appendChild(staffCard);
+      });
+    }
+
+    async function handleToggleStaffStatus(e) {
+      if (!e.target.classList.contains('toggle-staff-btn')) return;
+      const userId = e.target.dataset.userId;
+      const newStatus = e.target.dataset.newStatus;
+      const actionText = newStatus === 'active' ? 'เปิดใช้งาน' : 'ระงับ';
+
+      const { error } = await supabase.from('profiles').update({ status: newStatus }).eq('id', userId);
+      if (error) {
+        showMessage(`${actionText}พนักงานล้มเหลว: ` + error.message, 'error');
+      } else {
+        showMessage(`${actionText}พนักงานเรียบร้อยแล้ว`, 'success');
+        loadStaffList(); // โหลดรายการใหม่
+      }
+    }
+
+    async function handleResetPassword() {
+      const newPassword = newPasswordInput.value;
+      if (!newPassword) {
+        showMessage('กรุณากรอกรหัสผ่านใหม่', 'error');
+        return;
+      }
+      if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการรีเซ็ตรหัสผ่านของพนักงานทุกคน?')) {
+        return;
+      }
+
+      resetPasswordBtn.disabled = true;
+      resetPasswordBtn.textContent = 'กำลังรีเซ็ต...';
+
+      // 1. ดึงรายชื่อพนักงานทั้งหมด
+      const { data: staff, error: staffError } = await supabase.from('profiles').select('id').eq('role', 'staff');
+      if (staffError) {
+        showMessage('ไม่สามารถดึงข้อมูลพนักงานได้', 'error');
+        resetPasswordBtn.disabled = false;
+        resetPasswordBtn.textContent = 'รีเซ็ตรหัสผ่านทั้งหมด';
+        return;
+      }
+      const userIds = staff.map(s => s.id);
+
+      // 2. เรียก Edge Function
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(RESET_PASSWORD_FUNCTION_URL, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ user_ids: userIds, new_password: newPassword })
+      });
+
+      const result = await res.json();
+
+      if (res.ok) {
+        const successCount = result.results.filter(r => r.success).length;
+        const failCount = result.results.length - successCount;
+        showMessage(`รีเซ็ตรหัสผ่านสำเร็จ ${successCount} รายการ, ล้มเหลว ${failCount} รายการ`, failCount > 0 ? 'error' : 'success');
+        newPasswordInput.value = '';
+      } else {
+        showMessage('เกิดข้อผิดพลาด: ' + result.error, 'error');
+      }
+
+      resetPasswordBtn.disabled = false;
+      resetPasswordBtn.textContent = 'รีเซ็ตรหัสผ่านทั้งหมด';
+    }
+
+    // --- Event Listeners ---
+    loginForm.addEventListener('submit', handleLogin);
+    logoutBtn.addEventListener('click', handleLogout);
+    toggleStoreBtn.addEventListener('click', handleToggleStore);
+    staffList.addEventListener('click', handleToggleStaffStatus);
+    resetPasswordBtn.addEventListener('click', handleResetPassword);
+
+    // --- เริ่มต้น ---
+    checkAuth();
+  </script>
+</body>
+</html>
