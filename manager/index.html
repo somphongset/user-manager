@@ -83,6 +83,8 @@
   </div>
 
   <script type="module">
+    console.log('🚀 Manager App script started.');
+
     // --- การตั้งค่า Supabase ---
     // !!! สำคัญ: ให้แทนที่ค่าเหล่านี้ด้วยข้อมูลจริงของคุณ !!!
     const SUPABASE_URL = 'https://qtzvwwfczruwjzpwtgor.supabase.co';
@@ -91,6 +93,7 @@
 
     import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+    console.log('Initializing Supabase client...');
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     let currentUser = null;
 
@@ -110,6 +113,7 @@
 
     // --- ฟังก์ชันช่วยเหลือ ---
     function showMessage(text, type = 'info') {
+      console.log(`showMessage called: ${text} (${type})`);
       messageBox.textContent = text;
       messageBox.className = `fixed bottom-4 right-4 p-4 rounded-lg text-white font-semibold ${type === 'error' ? 'bg-red-500' : type === 'success' ? 'bg-green-500' : 'bg-blue-500'}`;
       messageBox.classList.remove('hidden');
@@ -117,6 +121,7 @@
     }
 
     function toggleScreens(showDashboard) {
+      console.log(`toggleScreens called with showDashboard: ${showDashboard}`);
       if (showDashboard) {
         loginScreen.classList.add('hidden');
         dashboardScreen.classList.remove('hidden');
@@ -128,20 +133,27 @@
 
     // --- ฟังก์ชันหลัก ---
     async function checkAuth() {
+      console.group('🔐 Checking Authentication...');
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
+        console.log('Session found. User is logged in.', session.user);
         currentUser = session.user;
         toggleScreens(true);
         loadDashboardData();
       } else {
+        console.log('No session found. User is not logged in.');
         toggleScreens(false);
       }
+      console.groupEnd();
     }
 
     async function handleLogin(e) {
+      console.group('🔑 Handling Login...');
       e.preventDefault();
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
+      console.log(`Attempting login for email: ${email}`);
+      
       loginBtn.disabled = true;
       loginBtn.textContent = 'กำลังเข้าสู่ระบบ...';
       loginError.classList.add('hidden');
@@ -149,38 +161,50 @@
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
       if (error) {
+        console.error('Login failed:', error);
         loginError.textContent = 'เข้าสู่ระบบล้มเหลว: ' + error.message;
         loginError.classList.remove('hidden');
       } else {
+        console.log('Login successful.', data.user);
         currentUser = data.user;
         toggleScreens(true);
         loadDashboardData();
       }
       loginBtn.disabled = false;
       loginBtn.textContent = 'เข้าสู่ระบบ';
+      console.groupEnd();
     }
 
     async function handleLogout() {
+      console.group('🚪 Handling Logout...');
       await supabase.auth.signOut();
+      console.log('Logout successful.');
       currentUser = null;
       toggleScreens(false);
       loginForm.reset();
+      console.groupEnd();
     }
 
     async function loadDashboardData() {
+      console.group('📊 Loading Dashboard Data...');
       await Promise.all([loadStoreStatus(), loadStaffList()]);
+      console.groupEnd();
     }
 
     async function loadStoreStatus() {
+      console.log('Fetching store status...');
       const { data, error } = await supabase.from('store_status').select('is_open').eq('id', 1).single();
       if (error) {
+        console.error('Failed to load store status:', error);
         showMessage('ไม่สามารถโหลดสถานะร้าน: ' + error.message, 'error');
         return;
       }
+      console.log('Store status fetched:', data);
       updateStoreStatusUI(data.is_open);
     }
 
     function updateStoreStatusUI(isOpen) {
+      console.log(`Updating store status UI. isOpen: ${isOpen}`);
       storeStatusText.textContent = isOpen ? 'ร้านเปิดอยู่' : 'ร้านปิดอยู่';
       if (isOpen) {
         toggleStoreBtn.textContent = 'ปิดร้าน';
@@ -193,30 +217,38 @@
     }
 
     async function handleToggleStore() {
+      console.group('🔄 Handling Toggle Store Status...');
       const currentStatus = storeStatusText.textContent === 'ร้านเปิดอยู่';
       const newStatus = !currentStatus;
+      console.log(`Current status: ${currentStatus}, new status: ${newStatus}`);
+      
       toggleStoreBtn.disabled = true;
       toggleStoreBtn.textContent = 'กำลังอัปเดต...';
 
       const { error } = await supabase.from('store_status').update({ is_open: newStatus }).eq('id', 1);
 
       if (error) {
+        console.error('Failed to update store status:', error);
         showMessage('อัปเดตสถานะล้มเหลว: ' + error.message, 'error');
-        // โหลดสถานะใหม่เพื่อคืนค่าปุ่ม
         await loadStoreStatus();
       } else {
+        console.log(`Store status updated successfully to: ${newStatus}`);
         updateStoreStatusUI(newStatus);
         showMessage(`ร้าน${newStatus ? 'เปิด' : 'ปิด'}เรียบร้อยแล้ว`, 'success');
       }
+      console.groupEnd();
     }
 
     async function loadStaffList() {
+      console.log('Fetching staff list...');
       const { data, error } = await supabase.from('profiles').select('id, full_name, status').eq('role', 'staff');
       staffList.innerHTML = '';
       if (error) {
+        console.error('Failed to load staff list:', error);
         staffList.innerHTML = '<p class="text-red-500">ไม่สามารถโหลดรายชื่อพนักงานได้</p>';
         return;
       }
+      console.log(`Staff list fetched. Found ${data.length} staff members.`, data);
       if (data.length === 0) {
         staffList.innerHTML = '<p class="text-gray-500">ไม่มีพนักงานในระบบ</p>';
         return;
@@ -239,26 +271,34 @@
 
     async function handleToggleStaffStatus(e) {
       if (!e.target.classList.contains('toggle-staff-btn')) return;
+      console.group('👥 Handling Toggle Staff Status...');
       const userId = e.target.dataset.userId;
       const newStatus = e.target.dataset.newStatus;
       const actionText = newStatus === 'active' ? 'เปิดใช้งาน' : 'ระงับ';
+      console.log(`Attempting to ${actionText} staff with ID: ${userId}`);
 
       const { error } = await supabase.from('profiles').update({ status: newStatus }).eq('id', userId);
       if (error) {
+        console.error(`Failed to ${actionText} staff:`, error);
         showMessage(`${actionText}พนักงานล้มเหลว: ` + error.message, 'error');
       } else {
+        console.log(`Staff status updated successfully.`);
         showMessage(`${actionText}พนักงานเรียบร้อยแล้ว`, 'success');
-        loadStaffList(); // โหลดรายการใหม่
+        loadStaffList();
       }
+      console.groupEnd();
     }
 
     async function handleResetPassword() {
+      console.group('🔐 Handling Reset Password...');
       const newPassword = newPasswordInput.value;
       if (!newPassword) {
+        console.warn('Reset password attempted without a new password.');
         showMessage('กรุณากรอกรหัสผ่านใหม่', 'error');
         return;
       }
       if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการรีเซ็ตรหัสผ่านของพนักงานทุกคน?')) {
+        console.log('Reset password cancelled by user.');
         return;
       }
 
@@ -266,16 +306,21 @@
       resetPasswordBtn.textContent = 'กำลังรีเซ็ต...';
 
       // 1. ดึงรายชื่อพนักงานทั้งหมด
+      console.log('Step 1: Fetching all staff IDs...');
       const { data: staff, error: staffError } = await supabase.from('profiles').select('id').eq('role', 'staff');
       if (staffError) {
+        console.error('Failed to fetch staff IDs for password reset:', staffError);
         showMessage('ไม่สามารถดึงข้อมูลพนักงานได้', 'error');
         resetPasswordBtn.disabled = false;
         resetPasswordBtn.textContent = 'รีเซ็ตรหัสผ่านทั้งหมด';
+        console.groupEnd();
         return;
       }
       const userIds = staff.map(s => s.id);
+      console.log('Staff IDs to reset:', userIds);
 
       // 2. เรียก Edge Function
+      console.log('Step 2: Calling reset-password Edge Function...');
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch(RESET_PASSWORD_FUNCTION_URL, {
         method: 'POST',
@@ -287,21 +332,26 @@
       });
 
       const result = await res.json();
+      console.log('Edge Function response:', result);
 
       if (res.ok) {
         const successCount = result.results.filter(r => r.success).length;
         const failCount = result.results.length - successCount;
+        console.log(`Password reset complete. Success: ${successCount}, Fail: ${failCount}`);
         showMessage(`รีเซ็ตรหัสผ่านสำเร็จ ${successCount} รายการ, ล้มเหลว ${failCount} รายการ`, failCount > 0 ? 'error' : 'success');
         newPasswordInput.value = '';
       } else {
+        console.error('Edge Function returned an error:', result.error);
         showMessage('เกิดข้อผิดพลาด: ' + result.error, 'error');
       }
 
       resetPasswordBtn.disabled = false;
       resetPasswordBtn.textContent = 'รีเซ็ตรหัสผ่านทั้งหมด';
+      console.groupEnd();
     }
 
     // --- Event Listeners ---
+    console.log('Attaching event listeners...');
     loginForm.addEventListener('submit', handleLogin);
     logoutBtn.addEventListener('click', handleLogout);
     toggleStoreBtn.addEventListener('click', handleToggleStore);
@@ -309,6 +359,7 @@
     resetPasswordBtn.addEventListener('click', handleResetPassword);
 
     // --- เริ่มต้น ---
+    console.log('Initial check for authentication...');
     checkAuth();
   </script>
 </body>
