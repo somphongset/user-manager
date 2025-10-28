@@ -77,97 +77,220 @@
     </div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-  <script type="module">
-    // ใส่ค่า Supabase ของคุณที่นี่
-    const SUPABASE_URL = 'https://qtzvwwfczruwjzpwtgor.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0enZ3d2ZjenJ1d2p6cHd0Z29yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTE1NjAsImV4cCI6MjA3NzA2NzU2MH0.oxHzSpmd3wgffCI-xN_1xkArliG6OQePsXwbDCDYrKk';
-    const LOGIN_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/login-with-pin`;
-    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    let currentUser = null;
-    const waitingScreen = document.getElementById('waiting-screen'); const loginScreen = document.getElementById('login-screen'); const posScreen = document.getElementById('pos-screen'); const loginForm = document.getElementById('login-form'); const staffSelect = document.getElementById('staff-select'); const pinInput = document.getElementById('pin-input'); const loginBtn = document.getElementById('login-btn'); const loginBtnText = document.getElementById('login-btn-text'); const loginBtnSpinner = document.getElementById('login-btn-spinner'); const loginError = document.getElementById('login-error'); const closeStoreBtn = document.getElementById('close-store-btn'); const logoutBtn = document.getElementById('logout-btn');
-    const messageToast = document.getElementById('message-toast'); const toastTitle = document.getElementById('toast-title'); const toastMessage = document.getElementById('toast-message'); const toastBootstrap = new bootstrap.Toast(messageToast);
-    function showMessage(text, type = 'info') { toastMessage.textContent = text; const toastHeader = messageToast.querySelector('.toast-header i'); toastHeader.className = 'bi me-2'; switch (type) { case 'success': toastHeader.classList.add('bi-check-circle-fill', 'text-success'); toastTitle.textContent = 'สำเร็จ'; break; case 'error': toastHeader.classList.add('bi-exclamation-triangle-fill', 'text-danger'); toastTitle.textContent = 'ข้อผิดพลาด'; break; default: toastHeader.classList.add('bi-info-circle-fill', 'text-primary'); toastTitle.textContent = 'แจ้งเตือน'; } toastBootstrap.show(); }
-    function toggleScreens(screen) { waitingScreen.classList.add('d-none'); loginScreen.classList.add('d-none'); posScreen.classList.add('d-none'); if (screen === 'waiting') waitingScreen.classList.remove('d-none'); if (screen === 'login') loginScreen.classList.remove('d-none'); if (screen === 'pos') posScreen.classList.remove('d-none'); }
-    async function checkStoreStatus() { const { data, error } = await supabase.from('store_status').select('is_open').eq('id', 1).single(); if (error) { console.error('Error checking store status:', error); toggleScreens('waiting'); return; } if (data.is_open) { toggleScreens('login'); loadStaffList(); } else { toggleScreens('waiting'); } }
-    async function loadStaffList() { const { data, error } = await supabase.from('profiles').select('id, full_name').eq('role', 'staff').eq('status', 'active'); staffSelect.innerHTML = ''; if (error) { staffSelect.innerHTML = '<option value="" disabled>ไม่สามารถโหลดข้อมูลได้</option>'; return; } if (data.length === 0) { staffSelect.innerHTML = '<option value="" disabled>ไม่มีพนักงานในระบบ</option>'; return; } staffSelect.innerHTML = '<option value="" selected disabled>เลือกพนักงาน...</option>'; data.forEach(staff => { const option = document.createElement('option'); option.value = staff.id; option.textContent = staff.full_name; staffSelect.appendChild(option); }); }
-    async function handleLogin(e) {
-  e.preventDefault();
-  const userId = staffSelect.value;
-  const pin = pinInput.value;
 
-  if (!userId || !pin) {
-    showMessage('กรุณาเลือกพนักงานและกรอกรหัส PIN', 'error');
-    return;
+<script type="module">
+  // ใส่ค่า Supabase ของคุณที่นี่
+  const SUPABASE_URL = 'https://qtzvwwfczruwjzpwtgor.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0enZ3d2ZjenJ1d2p6cHd0Z29yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTE1NjAsImV4cCI6MjA3NzA2NzU2MH0.oxHzSpmd3wgffCI-xN_1xkArliG6OQePsXwbDCDYrKk';
+  const LOGIN_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/login-with-pin`;
+
+  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  let currentUser = null;
+
+  // --- DOM Elements ---
+  const waitingScreen = document.getElementById('waiting-screen');
+  const loginScreen = document.getElementById('login-screen');
+  const posScreen = document.getElementById('pos-screen');
+  const loginForm = document.getElementById('login-form');
+  const staffSelect = document.getElementById('staff-select');
+  const pinInput = document.getElementById('pin-input');
+  const loginBtn = document.getElementById('login-btn');
+  const loginBtnText = document.getElementById('login-btn-text');
+  const loginBtnSpinner = document.getElementById('login-btn-spinner');
+  const loginError = document.getElementById('login-error');
+  const closeStoreBtn = document.getElementById('close-store-btn');
+  const logoutBtn = document.getElementById('logout-btn');
+
+  // --- Toast Elements ---
+  const messageToast = document.getElementById('message-toast');
+  const toastTitle = document.getElementById('toast-title');
+  const toastMessage = document.getElementById('toast-message');
+  const toastBootstrap = new bootstrap.Toast(messageToast);
+
+  // --- ฟังก์ชันช่วยเหลือ ---
+  function showMessage(text, type = 'info') {
+    toastMessage.textContent = text;
+    const toastHeader = messageToast.querySelector('.toast-header i');
+    toastHeader.className = 'bi me-2';
+    switch(type) {
+      case 'success':
+        toastHeader.classList.add('bi-check-circle-fill', 'text-success');
+        toastTitle.textContent = 'สำเร็จ';
+        break;
+      case 'error':
+        toastHeader.classList.add('bi-exclamation-triangle-fill', 'text-danger');
+        toastTitle.textContent = 'ข้อผิดพลาด';
+        break;
+      default:
+        toastHeader.classList.add('bi-info-circle-fill', 'text-primary');
+        toastTitle.textContent = 'แจ้งเตือน';
+    }
+    toastBootstrap.show();
   }
 
-  loginBtn.disabled = true;
-  loginBtnText.textContent = 'กำลังเข้าสู่ระบบ...';
-  loginBtnSpinner.classList.remove('d-none');
-  loginError.classList.add('d-none');
+  function toggleScreens(screen) {
+    console.log(`Toggling screen to: ${screen}`);
+    waitingScreen.classList.add('d-none');
+    loginScreen.classList.add('d-none');
+    posScreen.classList.add('d-none');
+    if (screen === 'waiting') waitingScreen.classList.remove('d-none');
+    if (screen === 'login') loginScreen.classList.remove('d-none');
+    if (screen === 'pos') posScreen.classList.remove('d-none');
+  }
 
-  try {
-    const res = await fetch(LOGIN_FUNCTION_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ userId, pin }),
+  // --- ฟังก์ชันหลัก ---
+  async function checkStoreStatus() {
+    console.log('Checking store status...');
+    const { data, error } = await supabase.from('store_status').select('is_open').eq('id', 1).single();
+    if (error) {
+      console.error('Error checking store status:', error);
+      toggleScreens('waiting');
+      return;
+    }
+    console.log('Store status is:', data.is_open);
+    if (data.is_open) {
+      toggleScreens('login');
+      loadStaffList();
+    } else {
+      toggleScreens('waiting');
+    }
+  }
+
+  async function loadStaffList() {
+    console.log('Loading staff list...');
+    const { data, error } = await supabase.from('profiles').select('id, full_name').eq('role', 'staff').eq('status', 'active');
+    staffSelect.innerHTML = '';
+    if (error) {
+      console.error('Error loading staff list:', error);
+      staffSelect.innerHTML = '<option value="" disabled>ไม่สามารถโหลดข้อมูลได้</option>';
+      return;
+    }
+    if (data.length === 0) {
+      staffSelect.innerHTML = '<option value="" disabled>ไม่มีพนักงานในระบบ</option>';
+      return;
+    }
+    staffSelect.innerHTML = '<option value="" selected disabled>เลือกพนักงาน...</option>';
+    data.forEach(staff => {
+      const option = document.createElement('option');
+      option.value = staff.id;
+      option.textContent = staff.full_name;
+      staffSelect.appendChild(option);
     });
+  }
 
-    const result = await res.json();
+  async function handleLogin(e) {
+    e.preventDefault();
+    const userId = staffSelect.value;
+    const pin = pinInput.value;
 
-    // --- เพิ่มการ Debug เพื่อตรวจสอบผลลัพธ์จาก Edge Function ---
-    console.log('Response from Edge Function:', result);
-    console.log('Response OK:', res.ok);
+    if (!userId || !pin) {
+      showMessage('กรุณาเลือกพนักงานและกรอกรหัส PIN', 'error');
+      return;
+    }
 
-    if (res.ok && result.success) {
-      // --- เพิ่มการตรวจสอบว่า Session มีอยู่จริงหรือไม่ ---
-      if (!result.session || !result.session.access_token || !result.session.refresh_token) {
-        throw new Error('Server did not return a valid session. Response: ' + JSON.stringify(result));
-      }
+    loginBtn.disabled = true;
+    loginBtnText.textContent = 'กำลังเข้าสู่ระบบ...';
+    loginBtnSpinner.classList.remove('d-none');
+    loginError.classList.add('d-none');
 
-      console.log('Attempting to set session with tokens:', {
-        access_token: result.session.access_token.substring(0, 10) + '...',
-        refresh_token: result.session.refresh_token.substring(0, 10) + '...'
+    try {
+      const res = await fetch(LOGIN_FUNCTION_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, pin }),
       });
 
-      // ตั้งค่า Session ให้กับ Supabase Client
-      const { data, error } = await supabase.auth.setSession(
-        result.session.access_token,
-        result.session.refresh_token
-      );
+      const result = await res.json();
+      console.log('Login successful, reloading page...');
 
-      if (error) {
-        // แสดงข้อผิดพลาดที่ชัดเจนยิ่งขึ้น
-        console.error('Error setting session:', error);
-        throw new Error(`Failed to set session: ${error.message}`);
+      if (res.ok && result.success && result.session) {
+        // 1. เก็บ Session ลงใน localStorage ด้วยตัวเอง
+        localStorage.setItem('supabase.auth.token', JSON.stringify({
+          currentSession: result.session,
+          expiresAt: result.session.expires_at
+        }));
+
+        // 2. โหลดหน้าเว็บใหม่ทันที
+        window.location.reload();
+
+      } else {
+        throw new Error(result.error || 'Login failed');
+      }
+    } catch (err) {
+      console.error('Full login error:', err);
+      loginError.textContent = 'เข้าสู่ระบบล้มเหลว: ' + err.message;
+      loginError.classList.remove('d-none');
+    } finally {
+      loginBtn.disabled = false;
+      loginBtnText.textContent = 'เข้าสู่ระบบ';
+      loginBtnSpinner.classList.add('d-none');
+    }
+  }
+
+  async function handleCloseStore() {
+    if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการปิดร้าน?')) return;
+    const { error } = await supabase.from('store_status').update({ is_open: false }).eq('id', 1);
+    if (error) {
+      showMessage('ปิดร้านล้มเหลว: ' + error.message, 'error');
+    } else {
+      await supabase.auth.signOut();
+      toggleScreens('waiting');
+      showMessage('ร้านปิดเรียบร้อยแล้ว', 'success');
+    }
+  }
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    toggleScreens('login');
+    showMessage('ออกจากระบบแล้ว', 'info');
+  }
+
+  // --- ฟังก์ชันเริ่มต้นแอป (ฉบับ Debug) ---
+  async function initializeApp() {
+    console.log('🚀 Initializing App...');
+    const { data: { session } } = await supabase.auth.getSession();
+
+    console.log('Session from getSession():', session);
+
+    if (session) {
+      console.log('Session found! Checking store status...');
+      currentUser = session.user;
+      const { data: statusData, error: statusError } = await supabase.from('store_status').select('is_open').eq('id', 1).single();
+
+      if (statusError) {
+        console.error('Error checking store status after login:', statusError);
+        toggleScreens('waiting');
+        return;
       }
 
-      console.log('Session set successfully:', data);
-      currentUser = data.user;
-      toggleScreens('pos');
-      showMessage('เข้าสู่ระบบสำเร็จ', 'success');
+      console.log('Store status after login is:', statusData.is_open);
+
+      if (statusData && statusData.is_open) {
+        console.log('✅ Store is open. Going to POS screen.');
+        toggleScreens('pos');
+        showMessage('ยินดีต้อนรับกลับ', 'info');
+      } else {
+        console.log('❌ Store is closed. Going to waiting screen.');
+        toggleScreens('waiting');
+      }
     } else {
-      throw new Error(result.error || 'Login failed');
+      console.log('No session found. Running normal check.');
+      await checkStoreStatus();
     }
-  } catch (err) {
-    console.error('Full login error:', err);
-    loginError.textContent = 'เข้าสู่ระบบล้มเหลว: ' + err.message;
-    loginError.classList.remove('d-none');
-  } finally {
-    loginBtn.disabled = false;
-    loginBtnText.textContent = 'เข้าสู่ระบบ';
-    loginBtnSpinner.classList.add('d-none');
   }
-}
-    async function handleCloseStore() { if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการปิดร้าน?')) return; const { error } = await supabase.from('store_status').update({ is_open: false }).eq('id', 1); if (error) { showMessage('ปิดร้านล้มเหลว: ' + error.message, 'error'); } else { await supabase.auth.signOut(); toggleScreens('waiting'); showMessage('ร้านปิดเรียบร้อยแล้ว', 'success'); } }
-    async function handleLogout() { await supabase.auth.signOut(); toggleScreens('login'); showMessage('ออกจากระบบแล้ว', 'info'); }
-    loginForm.addEventListener('submit', handleLogin); closeStoreBtn.addEventListener('click', handleCloseStore); logoutBtn.addEventListener('click', handleLogout);
-    // เริ่มต้นการทำงาน
-    setInterval(checkStoreStatus, 5000); // ตรวจสอบสถานะร้านทุก 5 วินาที
-    checkStoreStatus();
-  </script>
+
+  // --- Event Listeners ---
+  loginForm.addEventListener('submit', handleLogin);
+  closeStoreBtn.addEventListener('click', handleCloseStore);
+  logoutBtn.addEventListener('click', handleLogout);
+
+  // --- เริ่มต้นการทำงาน ---
+  initializeApp();
+  setInterval(checkStoreStatus, 5000);
+</script>
+
 </body>
 
 </html>
