@@ -4,96 +4,159 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Manager App</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.1/dist/tailwind.min.css" rel="stylesheet">
+  
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
+  
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#3b82f6">
+  <meta name="theme-color" content="#0d6efd">
 </head>
-<body class="bg-gray-100 min-h-screen font-sans">
+<body class="bg-light">
 
-  <!-- === หน้าจอ Login  === -->
-  <div id="login-screen" class="flex items-center justify-center min-h-screen">
-    <div class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
-      <h1 class="text-3xl font-bold text-center mb-6 text-blue-600">Manager Login 202510281635</h1>
-      <form id="login-form">
-        <div class="mb-4">
-          <label for="email" class="block text-gray-700 text-sm font-bold mb-2">อีเมล</label>
-          <input type="email" id="email" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+  <!-- === หน้าจอ Login === -->
+  <div id="login-screen" class="d-flex align-items-center min-vh-100">
+    <div class="container">
+      <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+          <div class="card shadow-lg border-0">
+            <div class="card-body p-4 p-md-5">
+              <div class="text-center mb-4">
+                <i class="bi bi-shield-lock-fill text-primary" style="font-size: 3rem;"></i>
+                <h1 class="fw-bold mt-3">Manager Login</h1>
+                <p class="text-muted">202510281710</p>
+              </div>
+              <form id="login-form">
+                <div class="mb-3">
+                  <label for="email" class="form-label">อีเมล</label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-envelope-fill"></i></span>
+                    <input type="email" id="email" class="form-control" required>
+                  </div>
+                </div>
+                <div class="mb-4">
+                  <label for="password" class="form-label">รหัสผ่าน</label>
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+                    <input type="password" id="password" class="form-control" required>
+                  </div>
+                </div>
+                <button type="submit" id="login-btn" class="btn btn-primary w-100 py-2">
+                  <span id="login-btn-text">เข้าสู่ระบบ</span>
+                  <span id="login-btn-spinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                </button>
+              </form>
+              <div id="login-error" class="alert alert-danger mt-3 text-center d-none" role="alert"></div>
+            </div>
+          </div>
         </div>
-        <div class="mb-6">
-          <label for="password" class="block text-gray-700 text-sm font-bold mb-2">รหัสผ่าน</label>
-          <input type="password" id="password" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <button type="submit" id="login-btn" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300">
-          เข้าสู่ระบบ
-        </button>
-      </form>
-      <div id="login-error" class="mt-4 text-red-500 text-sm text-center hidden"></div>
+      </div>
     </div>
   </div>
 
   <!-- === หน้าจอ Dashboard === -->
-  <div id="dashboard-screen" class="hidden">
-    <header class="bg-blue-600 text-white p-4 shadow-md">
-      <div class="container mx-auto flex justify-between items-center">
-        <h1 class="text-xl font-bold">Manager Dashboard</h1>
-        <button id="logout-btn" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg transition duration-300">
-          ออกจากระบบ
-        </button>
-      </div>
-    </header>
-
-    <main class="container mx-auto p-4 md:p-8">
-      <!-- ส่วนสถานะร้าน -->
-      <section class="bg-white p-6 rounded-lg shadow-md mb-6">
-        <h2 class="text-2xl font-semibold mb-4">สถานะร้าน</h2>
-        <div class="flex items-center justify-between">
-          <span id="store-status-text" class="text-lg font-medium">กำลังตรวจสอบ...</span>
-          <button id="toggle-store-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition duration-300" disabled>
-            โปรดรอ...
+  <div id="dashboard-screen" class="d-none">
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow">
+      <div class="container-fluid">
+        <a class="navbar-brand fw-bold" href="#">
+          <i class="bi bi-speedometer2 me-2"></i>Manager Dashboard
+        </a>
+        <div class="d-flex">
+          <button id="logout-btn" class="btn btn-outline-light">
+            <i class="bi bi-box-arrow-right me-1"></i>ออกจากระบบ
           </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container-fluid p-4 p-md-5">
+      <!-- ส่วนสถานะร้าน -->
+      <section class="card shadow-sm mb-4">
+        <div class="card-header bg-light py-3">
+          <h5 class="card-title mb-0"><i class="bi bi-shop me-2"></i>สถานะร้าน</h5>
+        </div>
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col">
+              <h4 id="store-status-text" class="mb-0">กำลังตรวจสอบ...</h4>
+            </div>
+            <div class="col-auto">
+              <button id="toggle-store-btn" class="btn btn-success" disabled>
+                <span id="toggle-store-btn-text">โปรดรอ...</span>
+                <span id="toggle-store-btn-spinner" class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true"></span>
+              </button>
+            </div>
+          </div>
         </div>
       </section>
 
       <!-- ส่วนจัดการพนักงาน -->
-      <section class="bg-white p-6 rounded-lg shadow-md mb-6">
-        <h2 class="text-2xl font-semibold mb-4">จัดการพนักงาน</h2>
-        <div id="staff-list" class="space-y-3">
-          <!-- รายชื่อพนักงานจะถูกสร้างที่นี่โดย JavaScript -->
+      <section class="card shadow-sm mb-4">
+        <div class="card-header bg-light py-3">
+          <h5 class="card-title mb-0"><i class="bi bi-people-fill me-2"></i>จัดการพนักงาน</h5>
+        </div>
+        <div class="card-body">
+          <ul id="staff-list" class="list-group list-group-flush">
+            <!-- รายชื่อพนักงานจะถูกสร้างที่นี่โดย JavaScript -->
+          </ul>
         </div>
       </section>
 
       <!-- ส่วนรีเซ็ตรหัสผ่าน -->
-      <section class="bg-white p-6 rounded-lg shadow-md">
-        <h2 class="text-2xl font-semibold mb-4">รีเซ็ตรหัสผ่านพนักงาน</h2>
-        <p class="text-gray-600 mb-4">การกระทำนี้จะเปลี่ยนรหัสผ่านสำหรับพนักงานทุกคนในระบบ</p>
-        <div class="flex items-end space-x-4">
-          <div class="flex-grow">
-            <label for="new-password" class="block text-gray-700 text-sm font-bold mb-2">รหัสผ่านใหม่</label>
-            <input type="password" id="new-password" placeholder="กรอกรหัสผ่านใหม่" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <section class="card shadow-sm">
+        <div class="card-header bg-light py-3">
+          <h5 class="card-title mb-0"><i class="bi bi-key-fill me-2"></i>รีเซ็ตรหัสผ่านพนักงาน</h5>
+        </div>
+        <div class="card-body">
+          <p class="text-muted">การกระทำนี้จะเปลี่ยนรหัสผ่านสำหรับพนักงานทุกคนในระบบ</p>
+          <div class="row g-3 align-items-end">
+            <div class="col-md">
+              <label for="new-password" class="form-label">รหัสผ่านใหม่</label>
+              <input type="password" id="new-password" class="form-control" placeholder="กรอกรหัสผ่านใหม่">
+            </div>
+            <div class="col-md-auto">
+              <button id="reset-password-btn" class="btn btn-warning">
+                <i class="bi bi-arrow-clockwise me-1"></i>
+                <span id="reset-password-btn-text">รีเซ็ตรหัสผ่านทั้งหมด</span>
+                <span id="reset-password-btn-spinner" class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true"></span>
+              </button>
+            </div>
           </div>
-          <button id="reset-password-btn" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-6 rounded-lg transition duration-300">
-            รีเซ็ตรหัสผ่านทั้งหมด
-          </button>
         </div>
       </section>
-
-      <!-- ส่วนแสดงข้อความต่างๆ -->
-      <div id="message-box" class="fixed bottom-4 right-4 p-4 rounded-lg text-white font-semibold hidden"></div>
     </main>
   </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="message-toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="toast-header">
+        <i class="bi bi-info-circle-fill text-primary me-2"></i>
+        <strong class="me-auto" id="toast-title">แจ้งเตือน</strong>
+        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
+      <div class="toast-body" id="toast-message">
+        <!-- ข้อความจะถูกแทรกที่นี่ -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap 5 JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
   <script type="module">
     console.log('🚀 Manager App script started.');
 
     // --- การตั้งค่า Supabase ---
-    // !!! สำคัญ: ให้แทนที่ค่าเหล่านี้ด้วยข้อมูลจริงของคุณ !!!
     const SUPABASE_URL = 'https://qtzvwwfczruwjzpwtgor.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0enZ3d2ZjenJ1d2p6cHd0Z29yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE0OTE1NjAsImV4cCI6MjA3NzA2NzU2MH0.oxHzSpmd3wgffCI-xN_1xkArliG6OQePsXwbDCDYrKk';
     const RESET_PASSWORD_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/reset-password`;
 
     import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-    console.log('Initializing Supabase client...');
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     let currentUser = null;
 
@@ -102,225 +165,214 @@
     const dashboardScreen = document.getElementById('dashboard-screen');
     const loginForm = document.getElementById('login-form');
     const loginBtn = document.getElementById('login-btn');
+    const loginBtnText = document.getElementById('login-btn-text');
+    const loginBtnSpinner = document.getElementById('login-btn-spinner');
     const loginError = document.getElementById('login-error');
     const logoutBtn = document.getElementById('logout-btn');
     const storeStatusText = document.getElementById('store-status-text');
     const toggleStoreBtn = document.getElementById('toggle-store-btn');
+    const toggleStoreBtnText = document.getElementById('toggle-store-btn-text');
+    const toggleStoreBtnSpinner = document.getElementById('toggle-store-btn-spinner');
     const staffList = document.getElementById('staff-list');
     const resetPasswordBtn = document.getElementById('reset-password-btn');
+    const resetPasswordBtnText = document.getElementById('reset-password-btn-text');
+    const resetPasswordBtnSpinner = document.getElementById('reset-password-btn-spinner');
     const newPasswordInput = document.getElementById('new-password');
-    const messageBox = document.getElementById('message-box');
+    
+    // Toast Elements
+    const messageToast = document.getElementById('message-toast');
+    const toastTitle = document.getElementById('toast-title');
+    const toastMessage = document.getElementById('toast-message');
+    const toastBootstrap = new bootstrap.Toast(messageToast);
 
     // --- ฟังก์ชันช่วยเหลือ ---
     function showMessage(text, type = 'info') {
       console.log(`showMessage called: ${text} (${type})`);
-      messageBox.textContent = text;
-      messageBox.className = `fixed bottom-4 right-4 p-4 rounded-lg text-white font-semibold ${type === 'error' ? 'bg-red-500' : type === 'success' ? 'bg-green-500' : 'bg-blue-500'}`;
-      messageBox.classList.remove('hidden');
-      setTimeout(() => messageBox.classList.add('hidden'), 3000);
+      toastMessage.textContent = text;
+      
+      // Set icon and title based on type
+      const toastHeader = messageToast.querySelector('.toast-header i');
+      toastHeader.className = 'bi me-2';
+      switch(type) {
+        case 'success':
+          toastHeader.classList.add('bi-check-circle-fill', 'text-success');
+          toastTitle.textContent = 'สำเร็จ';
+          break;
+        case 'error':
+          toastHeader.classList.add('bi-exclamation-triangle-fill', 'text-danger');
+          toastTitle.textContent = 'ข้อผิดพลาด';
+          break;
+        default:
+          toastHeader.classList.add('bi-info-circle-fill', 'text-primary');
+          toastTitle.textContent = 'แจ้งเตือน';
+      }
+      toastBootstrap.show();
     }
 
     function toggleScreens(showDashboard) {
-      console.log(`toggleScreens called with showDashboard: ${showDashboard}`);
       if (showDashboard) {
-        loginScreen.classList.add('hidden');
-        dashboardScreen.classList.remove('hidden');
+        loginScreen.classList.add('d-none');
+        dashboardScreen.classList.remove('d-none');
       } else {
-        loginScreen.classList.remove('hidden');
-        dashboardScreen.classList.add('hidden');
+        loginScreen.classList.remove('d-none');
+        dashboardScreen.classList.add('d-none');
       }
     }
 
     // --- ฟังก์ชันหลัก ---
     async function checkAuth() {
-      console.group('🔐 Checking Authentication...');
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        console.log('Session found. User is logged in.', session.user);
         currentUser = session.user;
         toggleScreens(true);
         loadDashboardData();
       } else {
-        console.log('No session found. User is not logged in.');
         toggleScreens(false);
       }
-      console.groupEnd();
     }
 
     async function handleLogin(e) {
-      console.group('🔑 Handling Login...');
       e.preventDefault();
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
-      console.log(`Attempting login for email: ${email}`);
       
       loginBtn.disabled = true;
-      loginBtn.textContent = 'กำลังเข้าสู่ระบบ...';
-      loginError.classList.add('hidden');
+      loginBtnText.textContent = 'กำลังเข้าสู่ระบบ...';
+      loginBtnSpinner.classList.remove('d-none');
+      loginError.classList.add('d-none');
 
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
       if (error) {
-        console.error('Login failed:', error);
         loginError.textContent = 'เข้าสู่ระบบล้มเหลว: ' + error.message;
-        loginError.classList.remove('hidden');
+        loginError.classList.remove('d-none');
       } else {
-        console.log('Login successful.', data.user);
         currentUser = data.user;
         toggleScreens(true);
         loadDashboardData();
       }
       loginBtn.disabled = false;
-      loginBtn.textContent = 'เข้าสู่ระบบ';
-      console.groupEnd();
+      loginBtnText.textContent = 'เข้าสู่ระบบ';
+      loginBtnSpinner.classList.add('d-none');
     }
 
     async function handleLogout() {
-      console.group('🚪 Handling Logout...');
       await supabase.auth.signOut();
-      console.log('Logout successful.');
       currentUser = null;
       toggleScreens(false);
       loginForm.reset();
-      console.groupEnd();
     }
 
     async function loadDashboardData() {
-      console.group('📊 Loading Dashboard Data...');
       await Promise.all([loadStoreStatus(), loadStaffList()]);
-      console.groupEnd();
     }
 
     async function loadStoreStatus() {
-      console.log('Fetching store status...');
       const { data, error } = await supabase.from('store_status').select('is_open').eq('id', 1).single();
       if (error) {
-        console.error('Failed to load store status:', error);
         showMessage('ไม่สามารถโหลดสถานะร้าน: ' + error.message, 'error');
         return;
       }
-      console.log('Store status fetched:', data);
       updateStoreStatusUI(data.is_open);
     }
 
     function updateStoreStatusUI(isOpen) {
-      console.log(`Updating store status UI. isOpen: ${isOpen}`);
       storeStatusText.textContent = isOpen ? 'ร้านเปิดอยู่' : 'ร้านปิดอยู่';
       if (isOpen) {
-        toggleStoreBtn.textContent = 'ปิดร้าน';
-        toggleStoreBtn.className = 'bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg transition duration-300';
+        toggleStoreBtnText.textContent = 'ปิดร้าน';
+        toggleStoreBtn.className = 'btn btn-danger';
       } else {
-        toggleStoreBtn.textContent = 'เปิดร้าน';
-        toggleStoreBtn.className = 'bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition duration-300';
+        toggleStoreBtnText.textContent = 'เปิดร้าน';
+        toggleStoreBtn.className = 'btn btn-success';
       }
       toggleStoreBtn.disabled = false;
+      toggleStoreBtnSpinner.classList.add('d-none');
     }
 
     async function handleToggleStore() {
-      console.group('🔄 Handling Toggle Store Status...');
       const currentStatus = storeStatusText.textContent === 'ร้านเปิดอยู่';
       const newStatus = !currentStatus;
-      console.log(`Current status: ${currentStatus}, new status: ${newStatus}`);
       
       toggleStoreBtn.disabled = true;
-      toggleStoreBtn.textContent = 'กำลังอัปเดต...';
+      toggleStoreBtnSpinner.classList.remove('d-none');
 
       const { error } = await supabase.from('store_status').update({ is_open: newStatus }).eq('id', 1);
 
       if (error) {
-        console.error('Failed to update store status:', error);
         showMessage('อัปเดตสถานะล้มเหลว: ' + error.message, 'error');
         await loadStoreStatus();
       } else {
-        console.log(`Store status updated successfully to: ${newStatus}`);
         updateStoreStatusUI(newStatus);
         showMessage(`ร้าน${newStatus ? 'เปิด' : 'ปิด'}เรียบร้อยแล้ว`, 'success');
       }
-      console.groupEnd();
     }
 
     async function loadStaffList() {
-      console.log('Fetching staff list...');
       const { data, error } = await supabase.from('profiles').select('id, full_name, status').eq('role', 'staff');
       staffList.innerHTML = '';
       if (error) {
-        console.error('Failed to load staff list:', error);
-        staffList.innerHTML = '<p class="text-red-500">ไม่สามารถโหลดรายชื่อพนักงานได้</p>';
+        staffList.innerHTML = '<li class="list-group-item text-danger">ไม่สามารถโหลดรายชื่อพนักงานได้</li>';
         return;
       }
-      console.log(`Staff list fetched. Found ${data.length} staff members.`, data);
       if (data.length === 0) {
-        staffList.innerHTML = '<p class="text-gray-500">ไม่มีพนักงานในระบบ</p>';
+        staffList.innerHTML = '<li class="list-group-item text-muted">ไม่มีพนักงานในระบบ</li>';
         return;
       }
       data.forEach(staff => {
-        const staffCard = document.createElement('div');
-        staffCard.className = 'flex justify-between items-center p-4 border rounded-lg';
-        staffCard.innerHTML = `
+        const staffItem = document.createElement('li');
+        staffItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+        staffItem.innerHTML = `
           <div>
-            <p class="font-semibold">${staff.full_name}</p>
-            <p class="text-sm ${staff.status === 'active' ? 'text-green-600' : 'text-red-600'}">สถานะ: ${staff.status === 'active' ? 'ใช้งานได้' : 'ระงับ'}</p>
+            <div class="fw-semibold">${staff.full_name}</div>
+            <span class="badge ${staff.status === 'active' ? 'bg-success' : 'bg-danger'}">${staff.status === 'active' ? 'ใช้งานได้' : 'ระงับ'}</span>
           </div>
-          <button data-user-id="${staff.id}" data-new-status="${staff.status === 'active' ? 'banned' : 'active'}" class="toggle-staff-btn px-4 py-2 rounded-lg text-white font-semibold ${staff.status === 'active' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'} transition duration-300">
+          <button data-user-id="${staff.id}" data-new-status="${staff.status === 'active' ? 'banned' : 'active'}" class="toggle-staff-btn btn ${staff.status === 'active' ? 'btn-outline-danger' : 'btn-outline-success'} btn-sm">
             ${staff.status === 'active' ? 'ระงับ' : 'เปิดใช้งาน'}
           </button>
         `;
-        staffList.appendChild(staffCard);
+        staffList.appendChild(staffItem);
       });
     }
 
     async function handleToggleStaffStatus(e) {
       if (!e.target.classList.contains('toggle-staff-btn')) return;
-      console.group('👥 Handling Toggle Staff Status...');
       const userId = e.target.dataset.userId;
       const newStatus = e.target.dataset.newStatus;
       const actionText = newStatus === 'active' ? 'เปิดใช้งาน' : 'ระงับ';
-      console.log(`Attempting to ${actionText} staff with ID: ${userId}`);
 
       const { error } = await supabase.from('profiles').update({ status: newStatus }).eq('id', userId);
       if (error) {
-        console.error(`Failed to ${actionText} staff:`, error);
         showMessage(`${actionText}พนักงานล้มเหลว: ` + error.message, 'error');
       } else {
-        console.log(`Staff status updated successfully.`);
         showMessage(`${actionText}พนักงานเรียบร้อยแล้ว`, 'success');
         loadStaffList();
       }
-      console.groupEnd();
     }
 
     async function handleResetPassword() {
-      console.group('🔐 Handling Reset Password...');
       const newPassword = newPasswordInput.value;
       if (!newPassword) {
-        console.warn('Reset password attempted without a new password.');
         showMessage('กรุณากรอกรหัสผ่านใหม่', 'error');
         return;
       }
       if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการรีเซ็ตรหัสผ่านของพนักงานทุกคน?')) {
-        console.log('Reset password cancelled by user.');
         return;
       }
 
       resetPasswordBtn.disabled = true;
-      resetPasswordBtn.textContent = 'กำลังรีเซ็ต...';
+      resetPasswordBtnText.textContent = 'กำลังรีเซ็ต...';
+      resetPasswordBtnSpinner.classList.remove('d-none');
 
-      // 1. ดึงรายชื่อพนักงานทั้งหมด
-      console.log('Step 1: Fetching all staff IDs...');
       const { data: staff, error: staffError } = await supabase.from('profiles').select('id').eq('role', 'staff');
       if (staffError) {
-        console.error('Failed to fetch staff IDs for password reset:', staffError);
         showMessage('ไม่สามารถดึงข้อมูลพนักงานได้', 'error');
         resetPasswordBtn.disabled = false;
-        resetPasswordBtn.textContent = 'รีเซ็ตรหัสผ่านทั้งหมด';
-        console.groupEnd();
+        resetPasswordBtnText.textContent = 'รีเซ็ตรหัสผ่านทั้งหมด';
+        resetPasswordBtnSpinner.classList.add('d-none');
         return;
       }
       const userIds = staff.map(s => s.id);
-      console.log('Staff IDs to reset:', userIds);
 
-      // 2. เรียก Edge Function
-      console.log('Step 2: Calling reset-password Edge Function...');
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch(RESET_PASSWORD_FUNCTION_URL, {
         method: 'POST',
@@ -332,26 +384,22 @@
       });
 
       const result = await res.json();
-      console.log('Edge Function response:', result);
 
       if (res.ok) {
         const successCount = result.results.filter(r => r.success).length;
         const failCount = result.results.length - successCount;
-        console.log(`Password reset complete. Success: ${successCount}, Fail: ${failCount}`);
         showMessage(`รีเซ็ตรหัสผ่านสำเร็จ ${successCount} รายการ, ล้มเหลว ${failCount} รายการ`, failCount > 0 ? 'error' : 'success');
         newPasswordInput.value = '';
       } else {
-        console.error('Edge Function returned an error:', result.error);
         showMessage('เกิดข้อผิดพลาด: ' + result.error, 'error');
       }
 
       resetPasswordBtn.disabled = false;
-      resetPasswordBtn.textContent = 'รีเซ็ตรหัสผ่านทั้งหมด';
-      console.groupEnd();
+      resetPasswordBtnText.textContent = 'รีเซ็ตรหัสผ่านทั้งหมด';
+      resetPasswordBtnSpinner.classList.add('d-none');
     }
 
     // --- Event Listeners ---
-    console.log('Attaching event listeners...');
     loginForm.addEventListener('submit', handleLogin);
     logoutBtn.addEventListener('click', handleLogout);
     toggleStoreBtn.addEventListener('click', handleToggleStore);
@@ -359,7 +407,6 @@
     resetPasswordBtn.addEventListener('click', handleResetPassword);
 
     // --- เริ่มต้น ---
-    console.log('Initial check for authentication...');
     checkAuth();
   </script>
 </body>
