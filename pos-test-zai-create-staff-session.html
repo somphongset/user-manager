@@ -1,3 +1,73 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POS System Test Harness</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; padding: 20px; background-color: #f4f4f4; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1, h2 { color: #333; }
+        .zone { border: 1px solid #ddd; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
+        .zone h2 { margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        input[type="text"], input[type="email"], input[type="password"] { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { padding: 10px 15px; border: none; background-color: #007bff; color: white; border-radius: 4px; cursor: pointer; margin-right: 10px; margin-bottom: 5px; }
+        button:hover { background-color: #0056b3; }
+        button.danger { background-color: #dc3545; }
+        button.danger:hover { background-color: #c82333; }
+        button.success { background-color: #28a745; }
+        button.success:hover { background-color: #218838; }
+        #results { background-color: #2d2d2d; color: #f0f0f0; padding: 15px; border-radius: 5px; white-space: pre-wrap; font-family: 'Courier New', Courier, monospace; max-height: 400px; overflow-y: scroll; }
+        .log-info { color: #17a2b8; }
+        .log-success { color: #28a745; }
+        .log-error { color: #dc3545; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>POS System Test Harness</h1>
+    <p>หน้าจอนี้ใช้สำหรับทดสอบการทำงานของ Backend (Supabase) ทุกอย่างก่อนจะสร้าง PWA จริง</p>
+
+    <div id="results">--- Log ---\n</div>
+
+    <div class="zone">
+        <h2>Manager Zone</h2>
+        <input type="email" id="managerEmail" placeholder="Manager Email (e.g., manager@test.com)">
+        <input type="password" id="managerPass" placeholder="Manager Password">
+        <button onclick="testManagerLogin()">1. Manager Login</button>
+        <button onclick="testLogout()">Logout</button>
+        <hr>
+        <button onclick="testOpenStore()">2. Open Store (Should Succeed)</button>
+        <button onclick="testCloseStore()">3. Close Store</button>
+        <hr>
+        <h4>Manage Staff Status</h4>
+        <input type="text" id="staffIdToManage" placeholder="Staff UUID to Ban/Unban">
+        <button class="danger" onclick="testBanStaff()">4. Ban Staff</button>
+        <button class="success" onclick="testUnbanStaff()">5. Unban Staff</button>
+    </div>
+
+    <div class="zone">
+        <h2>Staff Zone</h2>
+        <input type="text" id="staffId" placeholder="Staff UUID (e.g., xxxxxxx-xxxx-xxxx-xxxx)">
+        <input type="text" id="staffPin" placeholder="6-digit PIN">
+        <button onclick="testStaffLogin()">1. Staff Login (via PIN)</button>
+        <button onclick="testLogout()">Logout</button>
+        <hr>
+        <button onclick="testOpenStore()">2. Open Store (Should FAIL)</button>
+        <button onclick="testCloseStore()">3. Close Store (Should Succeed)</button>
+    </div>
+
+    <div class="zone">
+        <h2>Global Checks</h2>
+        <button onclick="checkStoreStatus()">Check Store Status</button>
+        <button onclick="checkMyProfile()">Check My Profile</button>
+    </div>
+</div>
+
+<!-- Supabase JS Client -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <!-- Supabase JS Client -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -166,3 +236,6 @@
         log('Test Harness Loaded. Configure your keys and start testing.', 'info');
     }
 </script>
+
+</body>
+</html>
