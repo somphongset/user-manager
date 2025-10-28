@@ -1,0 +1,16 @@
+{
+  "name": "Manager POS App",
+  "short_name": "ManagerApp",
+  "description": "แอปพลิเคชันสำหรับผู้จัดการร้านค้า",
+  "start_url": "/manager.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👨‍💼</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
