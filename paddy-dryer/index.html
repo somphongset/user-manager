@@ -12,44 +12,8 @@
   <!-- PWA Manifest (will create later) -->
   <!-- <link rel="manifest" href="manifest.json"> -->
   
-  <!-- Supabase Client - Multiple CDN Fallbacks -->
-  <script>
-    // ลองโหลด Supabase จาก CDN หลายตัว
-    (function() {
-      const cdns = [
-        'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js',
-        'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js',
-        'https://cdn.skypack.dev/@supabase/supabase-js@2'
-      ];
-      
-      let currentIndex = 0;
-      
-      function tryLoadSupabase() {
-        if (currentIndex >= cdns.length) {
-          console.error('❌ Failed to load Supabase from all CDNs');
-          return;
-        }
-        
-        const script = document.createElement('script');
-        script.src = cdns[currentIndex];
-        script.async = true;
-        
-        script.onload = function() {
-          console.log('✅ Supabase loaded from:', cdns[currentIndex]);
-        };
-        
-        script.onerror = function() {
-          console.warn('⚠️ Failed to load from:', cdns[currentIndex]);
-          currentIndex++;
-          tryLoadSupabase();
-        };
-        
-        document.head.appendChild(script);
-      }
-      
-      tryLoadSupabase();
-    })();
-  </script>
+  <!-- Supabase Client - Local Smart Loader -->
+  <script src="supabase-client.js"></script>
   
   <style>
     /* ========================================
@@ -586,8 +550,11 @@
     // ========================================
     // INITIALIZATION
     // ========================================
-    function initialize() {
+    async function initialize() {
       console.log('🚀 Initializing app...');
+      
+      // รอให้ Supabase Client พร้อม
+      await window.SupabaseLoader.load();
       
       // สร้าง Supabase client
       const supabaseReady = initSupabase();
@@ -595,6 +562,11 @@
       if (!supabaseReady) {
         alert('ไม่สามารถเชื่อมต่อระบบได้ กรุณาลองใหม่อีกครั้ง');
         return;
+      }
+      
+      // แสดง demo notification ถ้าอยู่ใน demo mode
+      if (window.SupabaseLoader.demoMode) {
+        showDemoNotification();
       }
       
       // เช็คว่า authenticated หรือยัง
@@ -608,51 +580,89 @@
       setupPinInputs();
     }
 
-    // รอให้ Supabase library โหลดเสร็จ
-    document.addEventListener('DOMContentLoaded', () => {
-      // เช็คว่า Supabase library โหลดและพร้อมใช้งานแล้วหรือยัง
-      const isSupabaseReady = () => {
-        return typeof supabase !== 'undefined' && 
-               typeof supabase.createClient === 'function';
-      };
+    // รอให้ SupabaseLoader พร้อม
+    document.addEventListener('DOMContentLoaded', async () => {
+      // เปลี่ยนข้อความเป็นกำลังโหลด
+      document.getElementById('loginSubtitle').textContent = 'กำลังเชื่อมต่อระบบ...';
+      document.getElementById('loginScreen').classList.add('loading');
       
-      if (isSupabaseReady()) {
-        initialize();
-      } else {
-        // รอ Supabase library โหลดและ parse เสร็จ
-        console.log('⏳ Waiting for Supabase library...');
+      // รอสูงสุด 10 วินาที
+      const timeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout')), 10000)
+      );
+      
+      try {
+        // รอจนกว่า SupabaseLoader จะโหลดเสร็จ
+        await Promise.race([
+          waitForSupabaseLoader(),
+          timeout
+        ]);
         
-        let attempts = 0;
-        const maxAttempts = 150; // รอสูงสุด 15 วินาที (150 x 100ms)
+        console.log('✅ SupabaseLoader ready');
+        await initialize();
         
-        const checkSupabase = setInterval(() => {
-          attempts++;
-          
-          // แสดง progress ทุก 10 ครั้ง (1 วินาที)
-          if (attempts % 10 === 0) {
-            const seconds = attempts / 10;
-            console.log(`⏳ Still waiting... (${seconds}s)`);
-            document.getElementById('loginSubtitle').textContent = 
-              `กำลังเชื่อมต่อระบบ... (${seconds}s)`;
-          }
-          
-          if (isSupabaseReady()) {
-            clearInterval(checkSupabase);
-            console.log('✅ Supabase library ready!');
-            initialize();
-          } else if (attempts >= maxAttempts) {
-            clearInterval(checkSupabase);
-            console.error('❌ Timeout waiting for Supabase library');
-            document.getElementById('loginSubtitle').innerHTML = 
-              '⚠️ <span style="color: red;">ไม่สามารถโหลดระบบได้</span><br>' +
-              '<small style="color: #666;">Internet ของคุณอาจช้าเกินไป<br>' +
-              'กรุณา <a href="javascript:location.reload()" style="color: #10b981; font-weight: bold;">คลิกที่นี่เพื่อลองใหม่</a> ' +
-              'หรือ <a href="#" onclick="useDemoMode(); return false;" style="color: #3b82f6; font-weight: bold;">ใช้โหมดทดสอบ</a></small>';
-            document.getElementById('loginScreen').classList.remove('loading');
-          }
-        }, 100);
+      } catch (error) {
+        console.error('❌ Failed to load:', error);
+        // ถ้า timeout หรือ error ใดๆ → ใช้ demo mode
+        console.log('🎭 Falling back to Demo Mode');
+        window.supabase = createDemoClient();
+        await initialize();
       }
     });
+
+    // รอให้ SupabaseLoader โหลดเสร็จ
+    function waitForSupabaseLoader() {
+      return new Promise((resolve) => {
+        const check = setInterval(() => {
+          if (window.SupabaseLoader && window.SupabaseLoader.isReady()) {
+            clearInterval(check);
+            resolve();
+          }
+        }, 100);
+      });
+    }
+
+    // สร้าง demo client (fallback)
+    function createDemoClient() {
+      return {
+        createClient: () => ({
+          from: (table) => ({
+            select: () => ({
+              order: () => Promise.resolve({
+                data: getMockDashboardData(),
+                error: null
+              })
+            })
+          }),
+          channel: () => ({
+            on: () => ({ on: () => ({ subscribe: () => {} }) })
+          }),
+          removeChannel: () => {}
+        })
+      };
+    }
+
+    // แสดง Demo notification
+    function showDemoNotification() {
+      const banner = document.createElement('div');
+      banner.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: white;
+        padding: 12px 20px;
+        text-align: center;
+        font-weight: bold;
+        z-index: 9999;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      `;
+      banner.innerHTML = '🎭 โหมดทดสอบ - ข้อมูลที่แสดงเป็นตัวอย่าง ไม่สามารถบันทึกข้อมูลจริงได้';
+      document.body.insertBefore(banner, document.body.firstChild);
+    }
+
+    window.showDemoNotification = showDemoNotification;
 
     // ========================================
     // SUPABASE INITIALIZATION
