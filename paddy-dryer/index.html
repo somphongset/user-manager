@@ -12,8 +12,44 @@
   <!-- PWA Manifest (will create later) -->
   <!-- <link rel="manifest" href="manifest.json"> -->
   
-  <!-- Supabase Client -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <!-- Supabase Client - Multiple CDN Fallbacks -->
+  <script>
+    // ลองโหลด Supabase จาก CDN หลายตัว
+    (function() {
+      const cdns = [
+        'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js',
+        'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js',
+        'https://cdn.skypack.dev/@supabase/supabase-js@2'
+      ];
+      
+      let currentIndex = 0;
+      
+      function tryLoadSupabase() {
+        if (currentIndex >= cdns.length) {
+          console.error('❌ Failed to load Supabase from all CDNs');
+          return;
+        }
+        
+        const script = document.createElement('script');
+        script.src = cdns[currentIndex];
+        script.async = true;
+        
+        script.onload = function() {
+          console.log('✅ Supabase loaded from:', cdns[currentIndex]);
+        };
+        
+        script.onerror = function() {
+          console.warn('⚠️ Failed to load from:', cdns[currentIndex]);
+          currentIndex++;
+          tryLoadSupabase();
+        };
+        
+        document.head.appendChild(script);
+      }
+      
+      tryLoadSupabase();
+    })();
+  </script>
   
   <style>
     /* ========================================
@@ -66,6 +102,11 @@
       max-width: 450px;
       margin: 0 auto;
       text-align: center;
+    }
+
+    #loginScreen.loading {
+      opacity: 0.6;
+      pointer-events: none;
     }
 
     #loginScreen h1 {
@@ -461,10 +502,10 @@
     <!-- ========================================
          LOGIN SCREEN
          ======================================== -->
-    <div id="loginScreen">
+    <div id="loginScreen" class="loading">
       <h1>🏭</h1>
       <h1>ระบบบันทึกการอบข้าวเปลือก</h1>
-      <p class="subtitle">กรุณาใส่ PIN เพื่อเข้าสู่ระบบ</p>
+      <p class="subtitle" id="loginSubtitle">กำลังเชื่อมต่อระบบ...</p>
 
       <form id="loginForm" onsubmit="handleLogin(event)">
         <div class="pin-input-container">
@@ -549,7 +590,12 @@
       console.log('🚀 Initializing app...');
       
       // สร้าง Supabase client
-      initSupabase();
+      const supabaseReady = initSupabase();
+      
+      if (!supabaseReady) {
+        alert('ไม่สามารถเชื่อมต่อระบบได้ กรุณาลองใหม่อีกครั้ง');
+        return;
+      }
       
       // เช็คว่า authenticated หรือยัง
       if (Auth.isAuthenticated()) {
@@ -564,17 +610,45 @@
 
     // รอให้ Supabase library โหลดเสร็จ
     document.addEventListener('DOMContentLoaded', () => {
-      // เช็คว่า Supabase library โหลดแล้วหรือยัง
-      if (typeof supabase !== 'undefined') {
+      // เช็คว่า Supabase library โหลดและพร้อมใช้งานแล้วหรือยัง
+      const isSupabaseReady = () => {
+        return typeof supabase !== 'undefined' && 
+               typeof supabase.createClient === 'function';
+      };
+      
+      if (isSupabaseReady()) {
         initialize();
       } else {
-        // รอ Supabase library โหลด
+        // รอ Supabase library โหลดและ parse เสร็จ
         console.log('⏳ Waiting for Supabase library...');
+        
+        let attempts = 0;
+        const maxAttempts = 150; // รอสูงสุด 15 วินาที (150 x 100ms)
+        
         const checkSupabase = setInterval(() => {
-          if (typeof supabase !== 'undefined') {
+          attempts++;
+          
+          // แสดง progress ทุก 10 ครั้ง (1 วินาที)
+          if (attempts % 10 === 0) {
+            const seconds = attempts / 10;
+            console.log(`⏳ Still waiting... (${seconds}s)`);
+            document.getElementById('loginSubtitle').textContent = 
+              `กำลังเชื่อมต่อระบบ... (${seconds}s)`;
+          }
+          
+          if (isSupabaseReady()) {
             clearInterval(checkSupabase);
-            console.log('✅ Supabase library loaded');
+            console.log('✅ Supabase library ready!');
             initialize();
+          } else if (attempts >= maxAttempts) {
+            clearInterval(checkSupabase);
+            console.error('❌ Timeout waiting for Supabase library');
+            document.getElementById('loginSubtitle').innerHTML = 
+              '⚠️ <span style="color: red;">ไม่สามารถโหลดระบบได้</span><br>' +
+              '<small style="color: #666;">Internet ของคุณอาจช้าเกินไป<br>' +
+              'กรุณา <a href="javascript:location.reload()" style="color: #10b981; font-weight: bold;">คลิกที่นี่เพื่อลองใหม่</a> ' +
+              'หรือ <a href="#" onclick="useDemoMode(); return false;" style="color: #3b82f6; font-weight: bold;">ใช้โหมดทดสอบ</a></small>';
+            document.getElementById('loginScreen').classList.remove('loading');
           }
         }, 100);
       }
@@ -695,7 +769,7 @@
     function handleLogout() {
       if (confirm('ต้องการออกจากระบบ?')) {
         // ปิด realtime subscription
-        if (realtimeChannel) {
+        if (realtimeChannel && window.supabaseClient) {
           window.supabaseClient.removeChannel(realtimeChannel);
         }
 
@@ -708,8 +782,14 @@
     // SCREEN SWITCHING
     // ========================================
     function showLoginScreen() {
-      document.getElementById('loginScreen').classList.remove('hidden');
+      const loginScreen = document.getElementById('loginScreen');
+      const loginSubtitle = document.getElementById('loginSubtitle');
+      
+      loginScreen.classList.remove('hidden', 'loading');
       document.getElementById('mainApp').classList.add('hidden');
+      
+      // อัพเดทข้อความ
+      loginSubtitle.textContent = 'กรุณาใส่ PIN เพื่อเข้าสู่ระบบ';
       
       // ล้าง PIN inputs
       document.querySelectorAll('.pin-digit').forEach(input => {
@@ -758,6 +838,13 @@
     // ========================================
     async function loadDashboard() {
       console.log('📊 Loading dashboard...');
+
+      // เช็คว่า Supabase client พร้อมหรือยัง
+      if (!window.supabaseClient) {
+        console.error('❌ Supabase client not ready');
+        alert('ระบบยังไม่พร้อม กรุณารอสักครู่');
+        return;
+      }
 
       // แสดง loading
       document.getElementById('loadingState').classList.remove('hidden');
@@ -945,6 +1032,12 @@
     // REALTIME SETUP
     // ========================================
     function setupRealtime() {
+      // เช็คว่า Supabase client พร้อมหรือยัง
+      if (!window.supabaseClient) {
+        console.warn('⚠️ Supabase client not ready for realtime');
+        return;
+      }
+
       console.log('🔄 Setting up realtime...');
 
       realtimeChannel = window.supabaseClient
@@ -971,6 +1064,92 @@
     // ========================================
     // ACTION HANDLERS (Placeholder)
     // ========================================
+    
+    // Demo Mode - ใช้เมื่อ Supabase โหลดไม่ได้
+    function useDemoMode() {
+      console.log('🎭 Switching to Demo Mode...');
+      
+      // Mock Supabase client
+      window.supabaseClient = {
+        from: (table) => ({
+          select: () => ({
+            order: () => Promise.resolve({
+              data: getMockDashboardData(),
+              error: null
+            })
+          }),
+          insert: () => Promise.resolve({ data: {}, error: null }),
+          update: () => Promise.resolve({ data: {}, error: null }),
+          delete: () => Promise.resolve({ data: {}, error: null })
+        }),
+        channel: () => ({
+          on: () => ({ on: () => ({ subscribe: () => {} }) })
+        }),
+        removeChannel: () => {}
+      };
+      
+      alert('🎭 กำลังใช้โหมดทดสอบ\n\nข้อมูลที่แสดงเป็นข้อมูลตัวอย่าง\nไม่สามารถบันทึกข้อมูลจริงได้');
+      
+      // เริ่มระบบ
+      initialize();
+    }
+    
+    // Mock Data
+    function getMockDashboardData() {
+      return [
+        {
+          dryer_number: 1,
+          status: 'drying',
+          batch_code: 'D1-20251029-001',
+          start_drying_time: new Date(Date.now() - 14.5 * 60 * 60 * 1000).toISOString(),
+          hours_elapsed: 14.5,
+          target_moisture: 15.0,
+          latest_moisture: 16.5,
+          operator_name: 'สมชาย'
+        },
+        {
+          dryer_number: 2,
+          status: 'available',
+          batch_code: null,
+          start_drying_time: null,
+          hours_elapsed: null,
+          target_moisture: null,
+          latest_moisture: null,
+          operator_name: null
+        },
+        {
+          dryer_number: 3,
+          status: 'drying',
+          batch_code: 'D3-20251029-001',
+          start_drying_time: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
+          hours_elapsed: 8.0,
+          target_moisture: 14.5,
+          latest_moisture: 18.2,
+          operator_name: 'สมหญิง'
+        },
+        {
+          dryer_number: 4,
+          status: 'loading',
+          batch_code: 'D4-20251029-001',
+          start_drying_time: null,
+          hours_elapsed: null,
+          target_moisture: 15.0,
+          latest_moisture: 24.5,
+          operator_name: 'สมศักดิ์'
+        },
+        {
+          dryer_number: 5,
+          status: 'drying',
+          batch_code: 'D5-20251029-001',
+          start_drying_time: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
+          hours_elapsed: 12.0,
+          target_moisture: 14.0,
+          latest_moisture: 15.8,
+          operator_name: 'สมพงษ์'
+        }
+      ];
+    }
+    
     function viewChart(dryerNumber) {
       alert(`🚧 ฟีเจอร์ดูกราฟเครื่อง ${dryerNumber} จะทำในไฟล์ต่อไป`);
     }
