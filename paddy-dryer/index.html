@@ -669,8 +669,13 @@
     // ========================================
     function initSupabase() {
       try {
-        // สร้าง Supabase client จาก global supabase object
-        window.supabaseClient = supabase.createClient(
+        // เช็คว่า supabase object มีหรือยัง
+        if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+          throw new Error('Supabase client not available');
+        }
+
+        // สร้าง Supabase client
+        window.supabaseClient = window.supabase.createClient(
           APP_CONFIG.SUPABASE_URL,
           APP_CONFIG.SUPABASE_ANON_KEY
         );
